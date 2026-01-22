@@ -60,7 +60,6 @@ public class SecurityConfig {
             "http://65.1.113.7:8084",
             "https://merchant.mippay.in",
             "https://admin.mippay.in"
-
         ));
 
         config.setAllowedMethods(List.of(
