@@ -126,6 +126,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         try {
             if (token != null) {
                 username = this.jwtHelper.getUsernameFromToken(token);
+                System.out.println("userName: "+username);
             }
         } catch (IllegalArgumentException e) {
             logger.info("Unable to extract username from token");
