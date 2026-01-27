@@ -576,4 +576,10 @@ public class ClientControlller {
         ResponseEntity<?> response = this.clientService.callbackUnlimit(data);
         return response;
     }
+
+    @PostMapping("/payG-orderCreate")
+    public ResponseEntity<?> payGOrderCreate (@RequestBody PayinDto data){
+        ResponseEntity<?> response = this.clientService.payGorderCreate(data);
+        return response;
+    }
 }

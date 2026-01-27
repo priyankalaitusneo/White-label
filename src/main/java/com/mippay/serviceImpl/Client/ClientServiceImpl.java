@@ -3209,5 +3209,80 @@ public class ClientServiceImpl implements ClientService {
         return ResponseEntity.ok("Success");
     }
 
+    @Override
+    public ResponseEntity<?> payGorderCreate(PayinDto data) {
+        String url = "https://uatapiv2.payg.in/payment/api/Order/Create";
+
+        RestTemplate restTemplate = new RestTemplate();
+        Map<String,Object> UserDefinedData = new HashMap<>();
+        UserDefinedData.put("UserDefined1", "");
+
+        Map<String,Object> TransactionData = new HashMap<>();
+        TransactionData.put("AcceptedPaymentTypes", "");
+        TransactionData.put("PaymentType", "");
+        TransactionData.put("SurchargeType", "");
+        TransactionData.put("SurchargeValue", "");
+        TransactionData.put("RefTransactionId", "");
+        TransactionData.put("IndustrySpecificationCode", "");
+        TransactionData.put("PartialPaymentOption", "");
+
+        Map<String,Object> OrderAmountData = new HashMap<>();
+        TransactionData.put("AmountTypeDesc", "");
+        TransactionData.put("Amount", "");
+
+        Map<String,Object> CustomerData = new HashMap<>();
+        CustomerData.put("CustomerId", "");
+        CustomerData.put("CustomerNotes", "");
+        CustomerData.put("FirstName", data.getName());
+        CustomerData.put("LastName", "");
+        CustomerData.put("MobileNo", data.getMobile());
+        CustomerData.put("Email", data.getEmail());
+        CustomerData.put("EmailReceipt", "");
+        CustomerData.put("BillingAddress", data.getAddress());
+        CustomerData.put("BillingCity", "");
+        CustomerData.put("BillingState", "");
+        CustomerData.put("BillingCountry", "");
+        CustomerData.put("BillingZipCode", "");
+        CustomerData.put("ShippingFirstName", "");
+        CustomerData.put("ShippingLastName", "");
+        CustomerData.put("ShippingAddress", "");
+        CustomerData.put("ShippingCity", "");
+        CustomerData.put("ShippingState", "");
+        CustomerData.put("ShippingCountry", "");
+        CustomerData.put("ShippingZipCode", "");
+        CustomerData.put("ShippingMobileNo", "");
+
+        Map<String,Object> IntegrationData = new HashMap<>();
+        IntegrationData.put("UserName", "");
+        IntegrationData.put("Source", "");
+        IntegrationData.put("IntegrationType", "");
+        IntegrationData.put("HashData", "");
+        IntegrationData.put("PlatformId", "");
+
+        Map<String,Object> map = new HashMap<>();
+        map.put("MID", "408000147774040");
+        map.put("UniqueRequestId", data.getOrderId());
+        map.put("UserDefinedData", UserDefinedData);
+        map.put("ProductData", "Online order for Order: "+data.getOrderId());
+        map.put("RequestDateTime", "");
+        map.put("RedirectUrl", "");
+        map.put("TransactionData", TransactionData);
+        map.put("OrderAmount", "20");
+        map.put("OrderType", "");
+        map.put("OrderAmountData", OrderAmountData);
+        map.put("CustomerData", CustomerData);
+        map.put("IntegrationData", IntegrationData);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Content-Type", "application/json");
+        headers.set("Authorization", "Basic "+Generator.base64encodedHeaders());
+
+        HttpEntity entity = new HttpEntity(map, headers);
+        System.out.println("entity: "+ entity);
+
+        ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        System.out.println("response: " + response.getBody());
+        return ResponseEntity.ok(response.getBody());
+    }
 
 }

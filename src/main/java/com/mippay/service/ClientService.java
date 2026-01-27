@@ -169,4 +169,6 @@ public interface ClientService {
 
 
     ResponseEntity<?> callbackUnlimit(Map<String, String> data);
+
+    ResponseEntity<?> payGorderCreate(PayinDto data);
 }
