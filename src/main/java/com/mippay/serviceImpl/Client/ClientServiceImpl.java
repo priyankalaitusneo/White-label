@@ -1620,110 +1620,8 @@ public class ClientServiceImpl implements ClientService {
 
 	@Override
 	public String saveCallBack(Map<String, Object> request) {
+        logger.info("callBack recieved from PayG : {}", request);
 		System.out.println("CallBack: " + request);
-		PayoutRecords records = this.payoutRepository.findByOrderId(request.get("order_id").toString());
-		String status = request.get("status").toString();
-		System.out.println("Status: " + status);
-		CallBack value = new CallBack();
-		if (request.get("code") == null) {
-			value.setCode(null);
-		} else {
-			value.setCode(request.get("code").toString());
-		}
-		if (request.get("organization_id") == null) {
-			value.setOrganizationId(null);
-		} else {
-			value.setOrganizationId(request.get("organization_id").toString());
-		}
-		if (request.get("transaction_id") == null) {
-			value.setTransactionId(null);
-		} else {
-			value.setTransactionId(request.get("transaction_id").toString());
-		}
-		if (request.get("order_id") == null) {
-			value.setOrderId(null);
-		} else {
-			value.setOrderId(request.get("order_id").toString());
-		}
-		if (request.get("description") == null) {
-			value.setDescription(null);
-		} else {
-			value.setDescription(request.get("description").toString());
-		}
-		if (request.get("utr") == null) {
-			value.setUtr(null);
-		} else {
-			value.setUtr(request.get("utr").toString());
-		}
-		if (request.get("ledger") == null) {
-			value.setLedger(null);
-		} else {
-			value.setLedger(request.get("ledger").toString());
-		}
-		if (request.get("payment_type") == null) {
-			value.setPaymentType(null);
-		} else {
-			value.setPaymentType(request.get("payment_type").toString());
-		}
-		if (request.get("amount") == null) {
-			value.setAmount(null);
-		} else {
-			value.setAmount(request.get("amount").toString());
-		}
-		if (request.get("transaction_fees") == null) {
-			value.setTransactionFees(null);
-		} else {
-			value.setTransactionFees(request.get("transaction_fees").toString());
-		}
-		if (request.get("payable_amount") == null) {
-			value.setPayableAmount(null);
-		} else {
-			value.setPayableAmount(request.get("payable_amount").toString());
-		}
-		if (request.get("status") == null) {
-			value.setStatus(null);
-		} else {
-			value.setStatus(request.get("status").toString());
-		}
-		Optional<CallBack> callback = this.callBackRepository
-				.findByTransactionId(request.get("transaction_id").toString());
-		if (callback.isEmpty()) {
-			// saving Call Back
-			this.callBackRepository.save(value);
-			System.out.println("Call Back is empty and Saved Successfully..!");
-			if (status.equals("COMPLETED") || status.equals("SUCCESS")) {
-				System.out.println("inside SUCCESS OR COMPLETED");
-				// Updating payout records as SUCCESS
-				this.payoutRepository.updateStatus("SUCCESS", "TXNS", "NULL", request.get("utr").toString(),
-						request.get("order_id").toString());
-				System.out.println("Call Back Saved And updated Payout Records as 'SUCCESS'..!");
-			}
-			if (status.equals("FAILED_REVERSED")) {
-				System.out.println("INSIDE FAILED AND REFUNDED");
-				// Updating payout records as FAILED
-				this.payoutRepository.updateStatus("FAILED", "TXNF", "Refund Completed", request.get("utr").toString(),
-						request.get("order_id").toString());
-				this.refundClient(request.get("order_id"));
-			}
-			System.out.println("Call Back Saved And updated Payout Records as 'FAILED'..!");
-		} else {
-			System.out.println("Call back was updated..!");
-			if (records.equals("PENDING") && status.equals("COMPLETED")) {
-				this.callBackRepository.updateStatus("SUCCESS", request.get("transaction_id").toString());
-			}
-			if ((records.equals("PENDING") && status.equals("FAILED_REVERSED")) || status.equals("FAILED_REVERSED")) {
-				this.callBackRepository.updateStatus("FAILED", request.get("transaction_id").toString());
-				this.payoutRepository.updateStatus("FAILED", "TXNF", "Refund Completed", request.get("utr").toString(),
-						request.get("order_id").toString());
-				this.refundClient(request.get("order_id"));
-			}
-		}
-		// sending call back to client
-
-		Optional<WebhookUrl> url = this.webhookRepository.findByUserIdAndUrl(records.getUserId());
-		if (url.isPresent()) {
-			this.sendCallBackToClient(value);
-		}
 		return "SUCCESS";
 	}
 
@@ -3263,7 +3161,7 @@ public class ClientServiceImpl implements ClientService {
         map.put("MID", "408000147774040");
         map.put("UniqueRequestId", data.getOrderId());
         map.put("UserDefinedData", UserDefinedData);
-        map.put("ProductData", "{'PaymentReason':'OnlineOrder for OrderNo-'"+ data.getOrderId() +",'Size':'medium','AppName':'abc'}");
+        map.put("ProductData", "{'PaymentReason':'OnlineOrder for OrderNo-"+ data.getOrderId() +"','Size':'medium','AppName':'abc'}");
         map.put("RequestDateTime", "");
         map.put("RedirectUrl", "");
         map.put("TransactionData", TransactionData);

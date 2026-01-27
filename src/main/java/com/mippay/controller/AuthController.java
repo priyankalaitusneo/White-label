@@ -202,38 +202,6 @@ public class AuthController {
     }
 
 
-    /////////////// Api for forget Password OTP ///////////////
-//    @PostMapping("/send-otp")
-//    public ResponseEntity<ResponseDto> forgetPassword(@RequestParam String email){
-//        String resellerResp = this.adminService.forgetPassword(email);
-//        ResponseDto response = ResponseDto.builder().response(resellerResp).status("OK").statusCode(200).build();
-//        return ResponseEntity.status(HttpStatus.OK).body(response);
-//    }
-
-    /////////////// Verify otp for Forger Password ///////////////
-//    @PostMapping("/verify-otp")
-//    public ResponseEntity<ResponseDto> verifyOtp(@RequestParam String email, @RequestParam String otp){
-//        String resellerResp = this.adminService.verifyOtp(email, otp);
-//        System.out.println("resellerResp: "+resellerResp);
-//        if(resellerResp.equals("Otp verified successful !!")){
-//            ResponseDto response = ResponseDto.builder().response(resellerResp).statusCode(200).status("OK").build();
-//            return ResponseEntity.status(HttpStatus.OK).body(response);
-//        }else{
-//            ResponseDto response = ResponseDto.builder().response(resellerResp).statusCode(400).status("BAD_REQUEST").build();
-//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-//        }
-//    }
-
-    /////////////// Api for Change Password ///////////////
-//    @PutMapping("/change-password")
-//    public ResponseEntity<ResponseDto> changePassword (@RequestParam String email, @RequestParam String password){
-//        String resellerResp = this.adminService.changePasswordWithoutLogin(email, password);
-//        ResponseDto response = ResponseDto.builder().response(resellerResp).status("OK").statusCode(200).build();
-//        return ResponseEntity.status(HttpStatus.OK).body(response);
-//    }
-
-    
-       /// Client token in body 
        
     @PostMapping("/client-login")
     public ResponseEntity<?> clientlogin(
@@ -291,48 +259,6 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
-
-    
-
-    /////////////// API to login client ///////////////
-//    @PostMapping("/client-login")
-//    public ResponseEntity<?> clientlogin(@Valid @RequestBody LoginRequest request, HttpServletResponse resp) {
-//    	logger.info("POST /client-login → Login request received for username: {}", request.getUsername());
-//        /* authenticate the username and password */
-//        String authentication = this.doAuthenticate(request.getUsername(), request.getPassword());
-//        logger.info("POST /client-login → Authentication result for {}: {}", request.getUsername(), authentication);
-//        if (authentication.equals("Authenticated")) {
-//            UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
-//            logger.info("POST /client-login → UserDetails loaded for {}", request.getUsername());
-//            String clientId = this.clientRepository.findByEmail(userDetails.getUsername()).get().getUserId();
-//            logger.info("POST /client-login → ClientId fetched: {}", clientId);
-//            /* Generate jwt token */
-//            String token = this.jwtHelper.generateToken(userDetails, clientId);
-//            logger.info("POST /client-login → JWT token generated for clientId: {}", clientId);
-//            /* get UserDetails by email using loadUserByUsername method  */
-//            Client client = this.clientService.getClientByEmail(request.getUsername());
-//            logger.info("POST /client-login → Client entity fetched: {}", client);
-//            // Creating cookie
-//            Cookie cookie = new Cookie("client-jwt", token);
-//            cookie.setHttpOnly(true);
-//            cookie.setSecure(true);
-//            cookie.setPath("/");
-//            cookie.setMaxAge(24 * 60 * 60);
-//            cookie.setAttribute("SameSite", "None");
-//            resp.addCookie(cookie);
-//            logger.info("POST /client-login → JWT cookie added for clientId: {}", client.getUserId());
-//            ClientLoginResponse response = ClientLoginResponse.builder()
-//                    .email(request.getUsername())
-//                    .userId(client.getUserId())
-//                    .build();
-//            logger.info("POST /client-login → Login successful for {}, Response: {}", request.getUsername(), response);
-//            return ResponseEntity.ok(response);
-//        } else {
-//        	logger.warn("POST /client-login → Authentication failed for {}", request.getUsername());
-//            return ResponseEntity.badRequest().body("Invalid username or password !!");
-//        }
-//    }
-//
 
     @PostMapping("/CallBack")
     public String getChargesByUserId(@RequestBody Map<String, Object> request) {
