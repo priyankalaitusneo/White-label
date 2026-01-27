@@ -3237,7 +3237,7 @@ public class ClientServiceImpl implements ClientService {
         CustomerData.put("LastName", "");
         CustomerData.put("MobileNo", data.getMobile());
         CustomerData.put("Email", data.getEmail());
-        CustomerData.put("EmailReceipt", "");
+        CustomerData.put("EmailReceipt", true);
         CustomerData.put("BillingAddress", data.getAddress());
         CustomerData.put("BillingCity", "");
         CustomerData.put("BillingState", "");
@@ -3263,7 +3263,7 @@ public class ClientServiceImpl implements ClientService {
         map.put("MID", "408000147774040");
         map.put("UniqueRequestId", data.getOrderId());
         map.put("UserDefinedData", UserDefinedData);
-        map.put("ProductData", "Online order for Order: "+data.getOrderId());
+        map.put("ProductData", "{'PaymentReason':'OnlineOrder for OrderNo-'"+ data.getOrderId() +",'Size':'medium','AppName':'abc'}");
         map.put("RequestDateTime", "");
         map.put("RedirectUrl", "");
         map.put("TransactionData", TransactionData);
