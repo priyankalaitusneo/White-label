@@ -18,7 +18,7 @@ public class Generator {
     }
 
     public static String base64encodedHeaders() {
-        String input = "1e7173f309454ebebac3b2ec17699aef:d2bebe33d42642aeb7a0c78afab59ab1:M:408000147774040";
+        String input = "0xd88318ead2d5ed439c45e83ef72d5d:0xe00ccf4967e49d448a89c2a95a2ab9:M:E1A4011A0AF7677";
         String base64Encoded = Base64.getEncoder().encodeToString(input.getBytes(StandardCharsets.UTF_8));
         System.out.println(base64Encoded);
         return base64Encoded;

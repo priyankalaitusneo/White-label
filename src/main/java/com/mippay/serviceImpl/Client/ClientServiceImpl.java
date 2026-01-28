@@ -3042,92 +3042,10 @@ public class ClientServiceImpl implements ClientService {
 	    return ResponseEntity.ok(response);
 	}
 
-    @Override
-    public ResponseEntity<?> payinPayout(PayinDto data) {
-
-        RestTemplate restTemplate = new RestTemplate();
-        String url = "https://psp.in.unlimit.com/api/auth/token";
-        String terminalCode = "2415";
-        String password = "DC5dmg4Nt6O9";
-        String body = "grant_type=password&terminal_code=" + terminalCode + "&password=" + password;
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        HttpEntity<String> entity = new HttpEntity<>(body, headers);
-        logger.info("HTTP entity constructed. Sending request to unlimit API: {}...", entity);
-
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-        logger.info("HTTP entity constructed. got the response from unlimit: {}...", response.getBody());
-        Map<String, Object> map = null;
-        try {
-            map = objectMapper.readValue(response.getBody(), Map.class);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-
-        String url1 = "https://psp.in.unlimit.com/api/payments";
-
-        HttpHeaders headers1 = new HttpHeaders();
-        headers1.set("Content-Type", "application/json");
-        headers1.set("Authorization", "Bearer "+map.get("access_token"));
-        logger.debug("Headers prepared for Trexo payout API.");
-
-        String timestamp = Instant.now().toString();
-        logger.info("current time generated in UTC formatt: {}", timestamp);
-
-        Map<String, Object> json = new HashMap<>();
-
-        Map<String, String> request = new HashMap<>();
-        request.put("id", data.getOrderId());
-        request.put("time",timestamp);
-
-        Map<String, String> merchantOrder = new HashMap<>();
-        merchantOrder.put("id", data.getOrderId());
-        merchantOrder.put("description", "none");
-
-        Map<String, String> paymentData = new HashMap<>();
-        paymentData.put("amount", data.getAmount());
-        paymentData.put("currency", "INR");
-
-        Map<String, String> customer = new HashMap<>();
-        customer.put("email", data.getEmail());
-
-        json.put("request", request);
-        json.put("merchant_order", merchantOrder);
-        json.put("payment_method", "UPI");
-        json.put("payment_data", paymentData);
-        json.put("customer", customer);
-
-        HttpEntity entity1 = new HttpEntity(json, headers1);
-        logger.info("HTTP entity constructed. Sending request to Trexo API...");
-
-        try {
-            ResponseEntity<String> response1 = restTemplate.exchange(url1, HttpMethod.POST, entity1, String.class);
-            logger.info("Unlimit pay-in API responded for orderId: {} | Status: {}", data.getOrderId(),
-                    response1.getStatusCode());
-            logger.info("Unlimit raw response: {}", response.getBody());
-
-            return ResponseEntity.ok(response1.getBody());
-
-        } catch (HttpClientErrorException e) {
-            logger.error("Unlimit payout API error for orderId: {} | Status: {} | Body: {}", data.getOrderId(),
-                    e.getStatusCode(), e.getMessage());
-            JSONObject jsonErr = new JSONObject(e.getResponseBodyAsString());
-            return ResponseEntity.badRequest().body(jsonErr);
-
-        }
-    }
-
-    @Override
-    public ResponseEntity<?> callbackUnlimit(Map<String, String> data) {
-        logger.info("callBack recieved from unlimit: {}", data);
-        return ResponseEntity.ok("Success");
-    }
 
     @Override
     public ResponseEntity<?> payGorderCreate(PayinDto data) {
-        String url = "https://uatapiv2.payg.in/payment/api/Order/Create";
+        String url = "https://apiv2.payg.in/payment/api/order/createIntent";
 
         RestTemplate restTemplate = new RestTemplate();
         Map<String,Object> UserDefinedData = new HashMap<>();
@@ -3135,7 +3053,7 @@ public class ClientServiceImpl implements ClientService {
 
         Map<String,Object> TransactionData = new HashMap<>();
         TransactionData.put("AcceptedPaymentTypes", "");
-        TransactionData.put("PaymentType", "");
+        TransactionData.put("PaymentType", "UPIINTENT");
         TransactionData.put("SurchargeType", "");
         TransactionData.put("SurchargeValue", "");
         TransactionData.put("RefTransactionId", "");
@@ -3143,8 +3061,8 @@ public class ClientServiceImpl implements ClientService {
         TransactionData.put("PartialPaymentOption", "");
 
         Map<String,Object> OrderAmountData = new HashMap<>();
-        TransactionData.put("AmountTypeDesc", "");
-        TransactionData.put("Amount", "");
+        TransactionData.put("AmountTypeDesc", "2");
+        TransactionData.put("Amount", "2");
 
         Map<String,Object> CustomerData = new HashMap<>();
         CustomerData.put("CustomerId", "");
@@ -3179,12 +3097,12 @@ public class ClientServiceImpl implements ClientService {
         map.put("MID", "408000147774040");
         map.put("UniqueRequestId", data.getOrderId());
         map.put("UserDefinedData", UserDefinedData);
-        map.put("ProductData", "{'PaymentReason':'OnlineOrder for OrderNo-"+ data.getOrderId() +"','Size':'medium','AppName':'abc'}");
+//        map.put("ProductData", "{'PaymentReason':'OnlineOrder for OrderNo-"+ data.getOrderId() +"','Size':'medium','AppName':'abc'}");
         map.put("RequestDateTime", "");
         map.put("RedirectUrl", "");
         map.put("TransactionData", TransactionData);
         map.put("OrderAmount", "20");
-        map.put("OrderType", "");
+//        map.put("OrderType", "");
         map.put("OrderAmountData", OrderAmountData);
         map.put("CustomerData", CustomerData);
         map.put("IntegrationData", IntegrationData);
@@ -3196,9 +3114,15 @@ public class ClientServiceImpl implements ClientService {
         HttpEntity entity = new HttpEntity(map, headers);
         System.out.println("entity: "+ entity);
 
-        ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-        System.out.println("response: " + response.getBody());
-        return ResponseEntity.ok(response.getBody());
+        try{
+            ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+            System.out.println("response: " + response.getBody());
+            return ResponseEntity.ok(response.getBody());
+        } catch (HttpClientErrorException e) {
+            logger.error("PayG Payin API error for orderId: {} | Status: {} | Body: {}", data.getOrderId(),
+                    e.getStatusCode(), e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
    
