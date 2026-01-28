@@ -171,4 +171,7 @@ public interface ClientService {
     ResponseEntity<?> callbackUnlimit(Map<String, String> data);
 
     ResponseEntity<?> payGorderCreate(PayinDto data);
+
+	ResponseEntity<?> paymentPayinPhonepe(@Valid PayinDto data, String clientId, String clientSecretId,
+			HttpServletRequest request) throws Exception;
 }

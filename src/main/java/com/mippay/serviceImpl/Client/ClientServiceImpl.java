@@ -23,10 +23,10 @@ import com.mippay.repository.Admin.UserRepository;
 import com.mippay.repository.Client.*;
 
 import com.mippay.response.LocalCheckStatusResponse;
-
+import com.mippay.response.PhonePeOrderStatusResponse;
 import com.mippay.service.ClientService;
 import com.mippay.service.EmailService;
-
+import com.mippay.service.PhonePeAuthService;
 import com.mippay.util.JWTHelper;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +36,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -115,6 +116,23 @@ public class ClientServiceImpl implements ClientService {
 
     @Autowired
     private ObjectMapper objectMapper;
+    
+    @Autowired
+    private  PhonePeAuthService authService;
+
+    @Value("${phonepe.order-status-url}")
+    private String orderStatusBaseUrl;
+
+   
+    @Autowired
+    private PhonePeAuthService phonePeAuthService;
+
+    private static final String PHONEPE_PAY_URL =
+            "https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay";
+
+    private static final String PHONEPE_STATUS_URL =
+            "https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/order/";
+    
 
 	@Override
 	public ResponseEntity<?> editProfile(String userId, ClientEditProfileDto editProfileDto) {
@@ -3183,4 +3201,108 @@ public class ClientServiceImpl implements ClientService {
         return ResponseEntity.ok(response.getBody());
     }
 
+   
+
+    public PhonePeOrderStatusResponse checkStatus(
+            String merchantOrderId,
+            boolean details,
+            boolean errorContext
+    ) {
+
+        String token = authService.getAccessToken();
+
+        String url = orderStatusBaseUrl + "/" + merchantOrderId +
+                "/status?details=" + details +
+                "&errorContext=" + errorContext;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "O-Bearer " + token);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+
+        ResponseEntity<PhonePeOrderStatusResponse> response =
+                restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        request,
+                        PhonePeOrderStatusResponse.class
+                );
+
+        return response.getBody();
+    }
+
+
+    /* --------------------------------------------------
+       PAYIN CREATE
+    -------------------------------------------------- */
+
+	@Override
+	public ResponseEntity<?> paymentPayinPhonepe(@Valid PayinDto data, String clientId, String clientSecretId,
+			HttpServletRequest request) throws Exception{
+		
+
+
+	        // 🔐 (Your existing authentication, wallet, charges logic stays BEFORE this)
+
+	        RestTemplate restTemplate = new RestTemplate();
+	        String accessToken = phonePeAuthService.getAccessToken();
+
+	        /* ---------- metaInfo ---------- */
+	        Map<String, Object> metaInfo = new HashMap<>();
+	        metaInfo.put("udf1", data.getUserId());
+	        metaInfo.put("udf2", data.getEmail());
+	        metaInfo.put("udf3", data.getMobile());
+
+	        /* ---------- redirect URL ---------- */
+	        Map<String, Object> merchantUrls = new HashMap<>();
+	        merchantUrls.put(
+	                "redirectUrl",
+	                "https://yourdomain.com/phonepe/callback?orderId=" + data.getOrderId()
+	        );
+
+	        /* ---------- UPI ONLY ---------- */
+	        Map<String, Object> upi = new HashMap<>();
+	        upi.put("type", "UPI");
+
+	        Map<String, Object> paymentModeConfig = new HashMap<>();
+	        paymentModeConfig.put("enabledPaymentModes", new Object[]{upi});
+
+	        /* ---------- paymentFlow ---------- */
+	        Map<String, Object> paymentFlow = new HashMap<>();
+	        paymentFlow.put("type", "PG_CHECKOUT");
+	        paymentFlow.put("merchantUrls", merchantUrls);
+	        paymentFlow.put("paymentModeConfig", paymentModeConfig);
+
+	        /* ---------- final request ---------- */
+	        Map<String, Object> body = new HashMap<>();
+	        body.put("merchantOrderId", data.getOrderId());
+	        body.put("amount", Long.parseLong(data.getAmount())); // paisa
+	        body.put("expireAfter", 1200);
+	        body.put("metaInfo", metaInfo);
+	        body.put("paymentFlow", paymentFlow);
+
+	        HttpHeaders headers = new HttpHeaders();
+	        headers.setContentType(MediaType.APPLICATION_JSON);
+	        headers.set("Authorization", "O-Bearer " + accessToken);
+
+	        HttpEntity<Map<String, Object>> entity =
+	                new HttpEntity<>(body, headers);
+	        
+	        System.out.println(entity+"--");
+
+	        ResponseEntity<String> response =
+	                restTemplate.exchange(
+	                        PHONEPE_PAY_URL,
+	                        HttpMethod.POST,
+	                        entity,
+	                        String.class
+	                );
+
+	        return ResponseEntity.ok(response.getBody());
+	    }
+
+	
 }
