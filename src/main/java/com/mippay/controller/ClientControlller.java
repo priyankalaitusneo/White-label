@@ -555,27 +555,13 @@ public class ClientControlller {
 	@GetMapping("/transaction-countsOverall/{clientId}")
 	public ResponseEntity<?> transactionCountAndAmountOverall(
 	        @PathVariable String clientId) {
-
 	    logger.info("Start: transactionCountAndAmountOverall - clientId={}", clientId);
-
 	    try {
 	        return clientService.allTrasactionCountAndAmountOverall(clientId);
 	    } catch (Exception ex) {
 	        return internalErrorResponse("transactionCountAndAmountOverall", ex);
 	    }
 	}
-
-    @PostMapping("payin-payment")
-    public ResponseEntity<?> payinPayment (@RequestBody PayinDto data){
-        ResponseEntity<?> response = this.clientService.payinPayout(data);
-        return response;
-    }
-
-    @PostMapping("callback-unlimit")
-    public ResponseEntity<?> callbackUnlimit (@RequestBody Map<String,String> data){
-        ResponseEntity<?> response = this.clientService.callbackUnlimit(data);
-        return response;
-    }
 
     @PostMapping("/payG-orderCreate")
     public ResponseEntity<?> payGOrderCreate (@RequestBody PayinDto data){

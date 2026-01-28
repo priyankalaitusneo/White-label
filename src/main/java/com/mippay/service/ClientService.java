@@ -165,10 +165,5 @@ public interface ClientService {
 
 	ResponseEntity<?> allTrasactionCountAndAmountOverall(String clientId);
 
-    ResponseEntity<?> payinPayout(PayinDto data);
-
-
-    ResponseEntity<?> callbackUnlimit(Map<String, String> data);
-
     ResponseEntity<?> payGorderCreate(PayinDto data);
 }
