@@ -1811,8 +1811,8 @@ public class ClientServiceImpl implements ClientService {
 	        String clientId,
 	        String clientSecretId,
 	        HttpServletRequest req) throws Exception {
-	    logger.info("PAYIN: Started for userId = {}", data.getUserId());
 
+	    logger.info("PAYIN: Started for userId = {}", data.getUserId());
 	    Boolean authenticated = this.isAuthenticated(clientId, clientSecretId, data.getUserId());
 	    if (!authenticated) {
 	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -1822,6 +1822,7 @@ public class ClientServiceImpl implements ClientService {
 	                        .data("Authentication failed")
 	                        .build());
 	    }
+
 	    Optional<Client> clt = this.clientRepository.findByUserId(data.getUserId());
 	    if (clt.isEmpty()) {
 	        return ResponseEntity.badRequest()
@@ -1840,7 +1841,6 @@ public class ClientServiceImpl implements ClientService {
 	                        .data("Client is inactive")
 	                        .build());
 	    }
-
 	    String ip = ipFetching.getClientIP(req);
 	    Optional<IpAddress> ipRow = this.ipRepository.findByUserId(data.getUserId());
 	    if (ipRow.isEmpty() || !ip.equals(ipRow.get().getIpAddress())) {
@@ -1851,23 +1851,24 @@ public class ClientServiceImpl implements ClientService {
 	                        .data("IP not whitelisted")
 	                        .build());
 	    }
-
-	    if (data.getOrderId() != null && !data.getOrderId().isBlank()) {
-	        PayinRecords exist = this.payinRepository.findByOrderId(data.getOrderId());
-	        if (exist != null) {
-	            return ResponseEntity.badRequest()
-	                    .body(ResponseDto.builder()
-	                            .message("Error")
-	                            .status("BAD_REQUEST")
-	                            .data("Duplicate OrderId")
-	                            .build());
-	        }
-	    } else {
-	        data.setOrderId(Generator.generateRandomTranId(8));
+	    if (data.getOrderId() == null || data.getOrderId().isBlank()) {
+	        return ResponseEntity.badRequest()
+	                .body(ResponseDto.builder()
+	                        .message("Error")
+	                        .status("BAD_REQUEST")
+	                        .data("OrderId is mandatory")
+	                        .build());
 	    }
-
+	    PayinRecords exist = this.payinRepository.findByOrderId(data.getOrderId());
+	    if (exist != null) {
+	        return ResponseEntity.badRequest()
+	                .body(ResponseDto.builder()
+	                        .message("Error")
+	                        .status("BAD_REQUEST")
+	                        .data("Duplicate OrderId")
+	                        .build());
+	    }
 	    Map<String, Object> calc = this.payinChargesCalculations(data);
-
 	    if (!Boolean.TRUE.equals(calc.get("configured"))) {
 	        return ResponseEntity.badRequest()
 	                .body(ResponseDto.builder()
@@ -1876,7 +1877,6 @@ public class ClientServiceImpl implements ClientService {
 	                        .data("Charges not configured. Contact admin")
 	                        .build());
 	    }
-
 	    PayinRecords savedRecord;
 	    synchronized (this) {
 	        savedRecord = this.msPayinAdditionProcess(data, calc);
@@ -1889,51 +1889,78 @@ public class ClientServiceImpl implements ClientService {
 	                            .build());
 	        }
 	    }
-
 	    return ResponseEntity.ok(savedRecord);
 	}
 
-
 	private Map<String, Object> payinChargesCalculations(PayinDto data) {
+
 	    Map<String, Object> map = new HashMap<>();
+
 	    BigDecimal amount = safeBig(data.getAmount());
+
+	    // amount must be positive
+	    if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+	        map.put("configured", false);
+	        map.put("error", "Invalid amount");
+	        return map;
+	    }
+
 	    PayInCharges ch = this.payInChargesRepository
 	            .findApplicableCharges(data.getUserId(), amount.doubleValue());
 
+	    // charges config missing
 	    if (ch == null) {
 	        map.put("configured", false);
+	        map.put("error", "Charges not configured");
 	        return map;
 	    }
+
 	    BigDecimal charges;
 	    BigDecimal chargesAmount = toBigDecimal(ch.getChargesAmount());
+
 	    if ("PERCENTAGE".equalsIgnoreCase(ch.getChargesType())) {
 	        charges = amount.multiply(chargesAmount)
 	                .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 	    } else {
 	        charges = chargesAmount; // flat
 	    }
+
+	    // GST @ 18%
 	    BigDecimal gst = charges.multiply(BigDecimal.valueOf(18))
 	            .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
 	    BigDecimal netAmount = amount.subtract(charges.add(gst));
 
+	    // net amount must be > 0
 	    if (netAmount.compareTo(BigDecimal.ZERO) <= 0) {
-	        throw new IllegalArgumentException("Net amount must be greater than zero");
+	        map.put("configured", false);
+	        map.put("error", "Net amount invalid");
+	        return map;
 	    }
+
 	    map.put("configured", true);
-	    map.put("amount", amount);
+	    map.put("amount", amount.setScale(2, RoundingMode.HALF_UP));
 	    map.put("charges", charges.setScale(2, RoundingMode.HALF_UP));
 	    map.put("gstCharges", gst.setScale(2, RoundingMode.HALF_UP));
 	    map.put("netAmount", netAmount.setScale(2, RoundingMode.HALF_UP));
+
 	    return map;
 	}
+
+	
 
 	@Transactional
 	private PayinRecords msPayinAdditionProcess(PayinDto data, Map<String, Object> calc) {
 
 	    PayinRecords r = new PayinRecords();
 
-	    BigDecimal amount = safeBig(data.getAmount());
+	    // safety check
+	    if (!Boolean.TRUE.equals(calc.get("configured"))) {
+	        r.setStatus("FAILED");
+	        return r;
+	    }
+
+	    BigDecimal amount = toBigDecimal(calc.get("amount"));
 	    BigDecimal charges = toBigDecimal(calc.get("charges"));
 	    BigDecimal gst = toBigDecimal(calc.get("gstCharges"));
 	    BigDecimal netAmount = toBigDecimal(calc.get("netAmount"));
@@ -1943,16 +1970,20 @@ public class ClientServiceImpl implements ClientService {
 
 	    BigDecimal updatedWallet = currentWallet.add(netAmount);
 
-	    int updated =
-	            clientRepository.updateWalletBalance(updatedWallet.doubleValue(), data.getUserId());
+	    int updated = clientRepository
+	            .updateWalletBalance(updatedWallet.doubleValue(), data.getUserId());
 
 	    if (updated == 0) {
 	        r.setStatus("FAILED");
 	        return r;
 	    }
 
+	    // -------------------------
+	    // Fill Payin Record
+	    // -------------------------
 	    r.setOrderId(data.getOrderId());
 	    r.setUserId(data.getUserId());
+
 	    r.setName(nz(data.getName()));
 	    r.setEmail(nz(data.getEmail()));
 	    r.setMobile(nz(data.getMobile()));
@@ -1971,6 +2002,7 @@ public class ClientServiceImpl implements ClientService {
 	    r.setCurrentBalance(currentWallet.doubleValue());
 	    r.setUpdatedBalance(updatedWallet.doubleValue());
 
+	    // gateway placeholders
 	    r.setTrxnid("");
 	    r.setSettlementStatus("PENDING");
 	    r.setBankRefId("");
@@ -1986,6 +2018,7 @@ public class ClientServiceImpl implements ClientService {
 	    this.payinRepository.save(r);
 	    return r;
 	}
+
 
 
 	private BigDecimal safeBig(String s) {
