@@ -1806,199 +1806,187 @@ public class ClientServiceImpl implements ClientService {
 	}
 
 	@Override
-	public ResponseEntity<?> paymentPayin(PayinDto data, String clientId, String clientSecretId, HttpServletRequest req)
-			throws Exception {
+	public ResponseEntity<?> paymentPayin(
+	        PayinDto data,
+	        String clientId,
+	        String clientSecretId,
+	        HttpServletRequest req) throws Exception {
+	    logger.info("PAYIN: Started for userId = {}", data.getUserId());
 
-		logger.info("PAYIN: Started for userId = " + data.getUserId());
+	    Boolean authenticated = this.isAuthenticated(clientId, clientSecretId, data.getUserId());
+	    if (!authenticated) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body(ResponseDto.builder()
+	                        .message("ERROR")
+	                        .status("UNAUTHORIZED")
+	                        .data("Authentication failed")
+	                        .build());
+	    }
+	    Optional<Client> clt = this.clientRepository.findByUserId(data.getUserId());
+	    if (clt.isEmpty()) {
+	        return ResponseEntity.badRequest()
+	                .body(ResponseDto.builder()
+	                        .message("Error")
+	                        .status("BAD_REQUEST")
+	                        .data("Invalid client user-id")
+	                        .build());
+	    }
 
-		// --------------------------------------------------------
-		// 1) AUTHENTICATION
-		// --------------------------------------------------------
-		Boolean authenticated = this.isAuthenticated(clientId, clientSecretId, data.getUserId());
-		if (!authenticated) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ResponseDto.builder().message("ERROR")
-					.status("UNAUTHORIZED").data("Authentication failed").build());
-		}
+	    if (!isClientActive(clt.get())) {
+	        return ResponseEntity.badRequest()
+	                .body(ResponseDto.builder()
+	                        .message("Error")
+	                        .status("BAD_REQUEST")
+	                        .data("Client is inactive")
+	                        .build());
+	    }
 
-		// --------------------------------------------------------
-		// 2) CLIENT CHECK
-		// --------------------------------------------------------
-		Optional<Client> clt = this.clientRepository.findByUserId(data.getUserId());
-		if (clt.isEmpty()) {
-			return ResponseEntity.badRequest().body(ResponseDto.builder().message("Error").status("BAD_REQUEST")
-					.data("Invalid client user-id").build());
-		}
+	    String ip = ipFetching.getClientIP(req);
+	    Optional<IpAddress> ipRow = this.ipRepository.findByUserId(data.getUserId());
+	    if (ipRow.isEmpty() || !ip.equals(ipRow.get().getIpAddress())) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body(ResponseDto.builder()
+	                        .message("ERROR")
+	                        .status("BAD_REQUEST")
+	                        .data("IP not whitelisted")
+	                        .build());
+	    }
 
-		// --------------------------------------------------------
-		// 3) CLIENT ACTIVE CHECK
-		// --------------------------------------------------------
-		if (!isClientActive(clt.get())) {
-			return ResponseEntity.badRequest().body(
-					ResponseDto.builder().message("Error").status("BAD_REQUEST").data("Client is inactive").build());
-		}
+	    if (data.getOrderId() != null && !data.getOrderId().isBlank()) {
+	        PayinRecords exist = this.payinRepository.findByOrderId(data.getOrderId());
+	        if (exist != null) {
+	            return ResponseEntity.badRequest()
+	                    .body(ResponseDto.builder()
+	                            .message("Error")
+	                            .status("BAD_REQUEST")
+	                            .data("Duplicate OrderId")
+	                            .build());
+	        }
+	    } else {
+	        data.setOrderId(Generator.generateRandomTranId(8));
+	    }
 
-		// --------------------------------------------------------
-		// 4) IP WHITELIST CHECK
-		// --------------------------------------------------------
-		String ip = ipFetching.getClientIP(req);
-		Optional<IpAddress> ipRow = this.ipRepository.findByUserId(data.getUserId());
-		if (ipRow.isEmpty() || !ip.equals(ipRow.get().getIpAddress())) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-					ResponseDto.builder().message("ERROR").status("BAD_REQUEST").data("IP not whitelisted").build());
-		}
+	    Map<String, Object> calc = this.payinChargesCalculations(data);
 
-		// --------------------------------------------------------
-		// 5) DUPLICATE ORDER-ID CHECK
-		// --------------------------------------------------------
-		if (data.getOrderId() != null && !data.getOrderId().isBlank()) {
+	    if (!Boolean.TRUE.equals(calc.get("configured"))) {
+	        return ResponseEntity.badRequest()
+	                .body(ResponseDto.builder()
+	                        .message("Error")
+	                        .status("BAD_REQUEST")
+	                        .data("Charges not configured. Contact admin")
+	                        .build());
+	    }
 
-			PayinRecords exist = this.payinRepository.findByOrderId(data.getOrderId());
-			if (exist != null) {
-				return ResponseEntity.badRequest().body(
-						ResponseDto.builder().message("Error").status("BAD_REQUEST").data("Duplicate OrderId").build());
-			}
+	    PayinRecords savedRecord;
+	    synchronized (this) {
+	        savedRecord = this.msPayinAdditionProcess(data, calc);
+	        if (!"SUCCESS".equals(savedRecord.getStatus())) {
+	            return ResponseEntity.badRequest()
+	                    .body(ResponseDto.builder()
+	                            .message("Error")
+	                            .status("FAILED")
+	                            .data("Wallet update failed")
+	                            .build());
+	        }
+	    }
 
-		} else {
-			// --------------------------------------------------------
-			// 6) GENERATE ORDER-ID
-			// --------------------------------------------------------
-			data.setOrderId(Generator.generateRandomTranId(8));
-		}
-
-		// --------------------------------------------------------
-		// 7) CHARGES CALCULATION
-		// --------------------------------------------------------
-		Map<String, Object> calc = this.payinChargesCalculations(data);
-
-		if (calc.get("charges") == null || toBigDecimal(calc.get("charges")).compareTo(BigDecimal.ZERO) == 0) {
-
-			return ResponseEntity.badRequest().body(ResponseDto.builder().message("Error").status("BAD_REQUEST")
-					.data("Charges not configured. Contact admin").build());
-		}
-
-		// --------------------------------------------------------
-		// 8) WALLET ADD PROCESS (LIKE DEDUCTION IN PAYOUT)
-		// --------------------------------------------------------
-		PayinRecords savedRecord;
-
-		synchronized (this) {
-			savedRecord = this.msPayinAdditionProcess(data, calc);
-
-			if (!"SUCCESS".equals(savedRecord.getStatus())) {
-				return ResponseEntity.badRequest().body(
-						ResponseDto.builder().message("Error").status("FAILED").data("Wallet update failed").build());
-			}
-		}
-
-		// --------------------------------------------------------
-		// 9) RETURN SUCCESS RESPONSE
-		// --------------------------------------------------------
-		return ResponseEntity.ok(savedRecord);
+	    return ResponseEntity.ok(savedRecord);
 	}
 
+
 	private Map<String, Object> payinChargesCalculations(PayinDto data) {
+	    Map<String, Object> map = new HashMap<>();
+	    BigDecimal amount = safeBig(data.getAmount());
+	    PayInCharges ch = this.payInChargesRepository
+	            .findApplicableCharges(data.getUserId(), amount.doubleValue());
 
-		Map<String, Object> map = new HashMap<>();
+	    if (ch == null) {
+	        map.put("configured", false);
+	        return map;
+	    }
+	    BigDecimal charges;
+	    BigDecimal chargesAmount = toBigDecimal(ch.getChargesAmount());
+	    if ("PERCENTAGE".equalsIgnoreCase(ch.getChargesType())) {
+	        charges = amount.multiply(chargesAmount)
+	                .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+	    } else {
+	        charges = chargesAmount; // flat
+	    }
+	    BigDecimal gst = charges.multiply(BigDecimal.valueOf(18))
+	            .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
-		BigDecimal amount = safeBig(data.getAmount());
-		PayInCharges ch = this.payInChargesRepository.findApplicableCharges(data.getUserId(), amount.doubleValue());
+	    BigDecimal netAmount = amount.subtract(charges.add(gst));
 
-		if (ch == null) {
-			map.put("charges", BigDecimal.ZERO);
-			return map;
-		}
-
-		BigDecimal charges;
-
-		BigDecimal chargesAmount = toBigDecimal(ch.getChargesAmount());
-
-		if ("PERCENTAGE".equalsIgnoreCase(ch.getChargesType())) {
-
-			charges = amount.multiply(chargesAmount).divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
-
-		} else {
-
-			charges = chargesAmount; // flat charges
-
-		}
-
-		BigDecimal gst = charges.multiply(BigDecimal.valueOf(18)).divide(BigDecimal.valueOf(100), 6,
-				RoundingMode.HALF_UP);
-
-		BigDecimal netAmount = amount.subtract(charges.add(gst));
-
-		map.put("amount", amount);
-		map.put("charges", charges.setScale(2, RoundingMode.HALF_UP));
-		map.put("gstCharges", gst.setScale(2, RoundingMode.HALF_UP));
-		map.put("netAmount", netAmount.setScale(2, RoundingMode.HALF_UP));
-
-		return map;
+	    if (netAmount.compareTo(BigDecimal.ZERO) <= 0) {
+	        throw new IllegalArgumentException("Net amount must be greater than zero");
+	    }
+	    map.put("configured", true);
+	    map.put("amount", amount);
+	    map.put("charges", charges.setScale(2, RoundingMode.HALF_UP));
+	    map.put("gstCharges", gst.setScale(2, RoundingMode.HALF_UP));
+	    map.put("netAmount", netAmount.setScale(2, RoundingMode.HALF_UP));
+	    return map;
 	}
 
 	@Transactional
 	private PayinRecords msPayinAdditionProcess(PayinDto data, Map<String, Object> calc) {
 
-		PayinRecords r = new PayinRecords();
+	    PayinRecords r = new PayinRecords();
 
-		BigDecimal amount = safeBig(data.getAmount());
-		BigDecimal charges = toBigDecimal(calc.get("charges"));
-		BigDecimal gst = toBigDecimal(calc.get("gstCharges"));
-		BigDecimal netAmount = toBigDecimal(calc.get("netAmount"));
+	    BigDecimal amount = safeBig(data.getAmount());
+	    BigDecimal charges = toBigDecimal(calc.get("charges"));
+	    BigDecimal gst = toBigDecimal(calc.get("gstCharges"));
+	    BigDecimal netAmount = toBigDecimal(calc.get("netAmount"));
 
-		BigDecimal currentWallet = BigDecimal.valueOf(clientRepository.getWalletBalance(data.getUserId()));
+	    BigDecimal currentWallet =
+	            BigDecimal.valueOf(clientRepository.getWalletBalance(data.getUserId()));
 
-		BigDecimal updatedWallet = currentWallet.add(netAmount);
+	    BigDecimal updatedWallet = currentWallet.add(netAmount);
 
-		int updated = clientRepository.updateWalletBalance(updatedWallet.doubleValue(), data.getUserId());
+	    int updated =
+	            clientRepository.updateWalletBalance(updatedWallet.doubleValue(), data.getUserId());
 
-		if (updated == 0) {
-			r.setStatus("FAILED");
-			return r;
-		}
+	    if (updated == 0) {
+	        r.setStatus("FAILED");
+	        return r;
+	    }
 
-		// -------------------------
-		// FILL ALL NON-NULL FIELDS
-		// -------------------------
+	    r.setOrderId(data.getOrderId());
+	    r.setUserId(data.getUserId());
+	    r.setName(nz(data.getName()));
+	    r.setEmail(nz(data.getEmail()));
+	    r.setMobile(nz(data.getMobile()));
+	    r.setAddress(nz(data.getAddress()));
+	    r.setPaymentMethod(nz(data.getPaymentMethod()));
+	    r.setAccNumber(nz(data.getAccountNo()));
+	    r.setNumber(nz(data.getMobile()));
 
-		r.setOrderId(data.getOrderId());
-		r.setUserId(data.getUserId());
+	    r.setAmount(amount.doubleValue());
+	    r.setCharges(charges.doubleValue());
+	    r.setGstCharges(gst.doubleValue());
+	    r.setTotalCharges(charges.add(gst).doubleValue());
+	    r.setFinalAmount(netAmount.doubleValue());
 
-		r.setName(nz(data.getName()));
-		r.setEmail(nz(data.getEmail()));
-		r.setMobile(nz(data.getMobile()));
-		r.setAddress(nz(data.getAddress()));
-		r.setPaymentMethod(nz(data.getPaymentMethod()));
-		r.setAccNumber(nz(data.getAccountNo()));
-		r.setNumber(nz(data.getMobile()));
+	    r.setCurrentWalet(currentWallet.doubleValue());
+	    r.setCurrentBalance(currentWallet.doubleValue());
+	    r.setUpdatedBalance(updatedWallet.doubleValue());
 
-		r.setAmount(amount.doubleValue());
-		r.setCharges(charges.doubleValue());
-		r.setGstCharges(gst.doubleValue());
-		r.setTotalCharges(charges.add(gst).doubleValue());
-		r.setFinalAmount(netAmount.doubleValue());
+	    r.setTrxnid("");
+	    r.setSettlementStatus("PENDING");
+	    r.setBankRefId("");
+	    r.setUtr("");
+	    r.setErrorMsg("");
+	    r.setRefundStatus("");
+	    r.setPgId("");
 
-		r.setCurrentWalet(currentWallet.doubleValue());
-		r.setCurrentBalance(currentWallet.doubleValue());
-		r.setUpdatedBalance(updatedWallet.doubleValue());
+	    r.setTimeStamp(LocalDateTime.now().toString());
+	    r.setStatus("SUCCESS");
+	    r.setStatusCode("TXNP");
 
-		// --------- default gateway-related ----------
-		r.setTrxnid(""); // transactionId from gateway later
-		r.setSettlementStatus("PENDING");
-		r.setBankRefId("");
-		r.setUtr("");
-		r.setErrorMsg("");
-		r.setRefundStatus("");
-		r.setPgId("");
-
-		r.setTimeStamp(LocalDateTime.now().toString());
-
-		// --------- status ---------
-		r.setStatus("SUCCESS");
-		r.setStatusCode("TXNP");
-
-		this.payinRepository.save(r);
-		return r;
+	    this.payinRepository.save(r);
+	    return r;
 	}
+
 
 	private BigDecimal safeBig(String s) {
 		try {
