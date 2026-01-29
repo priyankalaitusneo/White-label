@@ -3163,70 +3163,121 @@ public class ClientServiceImpl implements ClientService {
        PAYIN CREATE
     -------------------------------------------------- */
 
-	@Override
-	public ResponseEntity<?> paymentPayinPhonepe(@Valid PayinDto data, String clientId, String clientSecretId,
-			HttpServletRequest request) throws Exception{
-		
+    @Override
+    public ResponseEntity<?> paymentPayinPhonepe(
+            @Valid PayinDto data,
+            String clientId,
+            String clientSecretId,
+            HttpServletRequest request) throws Exception {
 
+        // ------------------------------------------------
+        // PRE-CONDITIONS (already handled in your flow)
+        // - Client authentication
+        // - Wallet / charges logic
+        // ------------------------------------------------
 
-	        // 🔐 (Your existing authentication, wallet, charges logic stays BEFORE this)
+        RestTemplate restTemplate = new RestTemplate();
 
-	        RestTemplate restTemplate = new RestTemplate();
-	        String accessToken = phonePeAuthService.getAccessToken();
+        // 🔐 Get PhonePe OAuth token
+        String accessToken = phonePeAuthService.getAccessToken();
 
-	        /* ---------- metaInfo ---------- */
-	        Map<String, Object> metaInfo = new HashMap<>();
-	        metaInfo.put("udf1", data.getUserId());
-	        metaInfo.put("udf2", data.getEmail());
-	        metaInfo.put("udf3", data.getMobile());
+        // ------------------------------------------------
+        // metaInfo (DO NOT rename udf keys)
+        // ------------------------------------------------
+        Map<String, Object> metaInfo = new HashMap<>();
+        metaInfo.put("udf1", data.getUserId());
+        metaInfo.put("udf2", data.getEmail());
+        metaInfo.put("udf3", data.getMobile());
 
-	        /* ---------- redirect URL ---------- */
-	        Map<String, Object> merchantUrls = new HashMap<>();
-	        merchantUrls.put(
-	                "redirectUrl",
-	                "https://yourdomain.com/phonepe/callback?orderId=" + data.getOrderId()
-	        );
+        // ------------------------------------------------
+        // Redirect URL (must be reachable)
+        // ------------------------------------------------
+        Map<String, Object> merchantUrls = new HashMap<>();
+        merchantUrls.put(
+                "redirectUrl",
+                "https://example.com/phonepe/callback?orderId=" + data.getOrderId()
+        );
 
-	        /* ---------- UPI ONLY ---------- */
-	        Map<String, Object> upi = new HashMap<>();
-	        upi.put("type", "UPI");
+        // ------------------------------------------------
+        // UPI INTENT (CORRECT MODE FOR PAYIN)
+        // ------------------------------------------------
+        Map<String, Object> upiIntent = new HashMap<>();
+        upiIntent.put("type", "UPI_INTENT");
 
-	        Map<String, Object> paymentModeConfig = new HashMap<>();
-	        paymentModeConfig.put("enabledPaymentModes", new Object[]{upi});
+        List<Map<String, Object>> enabledPaymentModes = new ArrayList<>();
+        enabledPaymentModes.add(upiIntent);
 
-	        /* ---------- paymentFlow ---------- */
-	        Map<String, Object> paymentFlow = new HashMap<>();
-	        paymentFlow.put("type", "PG_CHECKOUT");
-	        paymentFlow.put("merchantUrls", merchantUrls);
-	        paymentFlow.put("paymentModeConfig", paymentModeConfig);
+        Map<String, Object> paymentModeConfig = new HashMap<>();
+        paymentModeConfig.put("enabledPaymentModes", enabledPaymentModes);
 
-	        /* ---------- final request ---------- */
-	        Map<String, Object> body = new HashMap<>();
-	        body.put("merchantOrderId", data.getOrderId());
-	        body.put("amount", Long.parseLong(data.getAmount())); // paisa
-	        body.put("expireAfter", 1200);
-	        body.put("metaInfo", metaInfo);
-	        body.put("paymentFlow", paymentFlow);
+        // ------------------------------------------------
+        // paymentFlow
+        // ------------------------------------------------
+        Map<String, Object> paymentFlow = new HashMap<>();
+        paymentFlow.put("type", "PG_CHECKOUT");
+        paymentFlow.put("merchantUrls", merchantUrls);
+        paymentFlow.put("paymentModeConfig", paymentModeConfig);
 
-	        HttpHeaders headers = new HttpHeaders();
-	        headers.setContentType(MediaType.APPLICATION_JSON);
-	        headers.set("Authorization", "O-Bearer " + accessToken);
+        // ------------------------------------------------
+        // Final request body
+        // ------------------------------------------------
+        Map<String, Object> body = new HashMap<>();
+        body.put("merchantOrderId", data.getOrderId());
+        body.put("amount", Long.parseLong(data.getAmount())); // amount in paisa
+        body.put("expireAfter", 1200); // optional (300–3600)
+        body.put("metaInfo", metaInfo);
+        body.put("paymentFlow", paymentFlow);
 
-	        HttpEntity<Map<String, Object>> entity =
-	                new HttpEntity<>(body, headers);
-	        
-	        System.out.println(entity+"--");
+        // ------------------------------------------------
+        // Headers
+        // ------------------------------------------------
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "O-Bearer " + accessToken);
 
-	        ResponseEntity<String> response =
-	                restTemplate.exchange(
-	                        PHONEPE_PAY_URL,
-	                        HttpMethod.POST,
-	                        entity,
-	                        String.class
-	                );
+        HttpEntity<Map<String, Object>> entity =
+                new HttpEntity<>(body, headers);
 
-	        return ResponseEntity.ok(response.getBody());
-	    }
+        // ------------------------------------------------
+        // LOG REQUEST (PROOF #1)
+        // ------------------------------------------------
+        logger.info("PHONEPE REQUEST ▶ URL={} BODY={}", PHONEPE_PAY_URL, body);
+
+        try {
+            // ------------------------------------------------
+            // Call PhonePe Create Payment API
+            // ------------------------------------------------
+            ResponseEntity<String> response =
+                    restTemplate.exchange(
+                            PHONEPE_PAY_URL,
+                            HttpMethod.POST,
+                            entity,
+                            String.class
+                    );
+
+            // ------------------------------------------------
+            // LOG RESPONSE (PROOF #2)
+            // ------------------------------------------------
+            logger.info("PHONEPE RESPONSE ◀ {}", response.getBody());
+
+            return ResponseEntity.ok(response.getBody());
+
+        } catch (HttpClientErrorException e) {
+
+            // ------------------------------------------------
+            // LOG ERROR (PROOF #3)
+            // ------------------------------------------------
+            logger.error(
+                    "PHONEPE ERROR ◀ Status={} Response={}",
+                    e.getStatusCode(),
+                    e.getResponseBodyAsString()
+            );
+
+            return ResponseEntity
+                    .status(e.getStatusCode())
+                    .body(e.getResponseBodyAsString());
+        }
+    }
 
 	
 }
