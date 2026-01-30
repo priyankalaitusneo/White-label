@@ -58,8 +58,8 @@ public class SecurityConfig {
             "http://localhost:5174",
             "http://65.1.113.7:8083",
             "http://65.1.113.7:8084",
-            "https://admin.mippay.in",
-            "https://merchant.mippay.in"
+            "admin.mippay.meihitech.com",
+            "merchant.mippay.meihitech.com"
 
         ));
 
