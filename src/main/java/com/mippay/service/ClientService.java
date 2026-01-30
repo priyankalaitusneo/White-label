@@ -166,4 +166,7 @@ public interface ClientService {
 	ResponseEntity<?> allTrasactionCountAndAmountOverall(String clientId);
 
     ResponseEntity<?> payGorderCreate(PayinDto data);
+
+	ResponseEntity<?> paymentPayinPhonepe(@Valid PayinDto data, String clientId, String clientSecretId,
+			HttpServletRequest request) throws Exception;
 }

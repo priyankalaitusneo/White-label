@@ -38,6 +38,13 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/payment/auth/**").permitAll()
+                .requestMatchers(
+                        "/phonepe/payment",
+                        "/phonepe/callback",
+                        "/phonepe/token",
+                        "/phonepe/order-status/**"
+                    ).permitAll()
+                .requestMatchers("/phonepe/webhook").permitAll()
                 .requestMatchers("/payment/admin/**").authenticated()
                 .anyRequest()
                 .authenticated()
