@@ -1837,6 +1837,7 @@ public class ClientServiceImpl implements ClientService {
 
 	    // ---------------- IP ----------------
 	    String ip = ipFetching.getClientIP(req);
+	    System.out.println(ip);
 	    Optional<IpAddress> ipEntity = ipRepository.findByUserId(data.getUserId());
 	    if (ipEntity.isEmpty() || !ip.equals(ipEntity.get().getIpAddress())) {
 	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
