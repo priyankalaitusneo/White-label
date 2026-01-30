@@ -1807,6 +1807,7 @@ public class ClientServiceImpl implements ClientService {
 	}
 
 	@Override
+	@Transactional
 	public ResponseEntity<?> paymentPayin(
 	        PayinDto data,
 	        String clientId,
@@ -1877,19 +1878,24 @@ public class ClientServiceImpl implements ClientService {
 	    }
 
 	    // ====================================================
-	    // 🔴 CALL PHONEPE (LIKE PAYOUT)
+	    // 🔴 CALL PHONEPE CHECKOUT API
 	    // ====================================================
 	    ResponseEntity<String> phonePeResponse = phonePeCreatePayment(data);
 
 	    ObjectMapper mapper = new ObjectMapper();
 	    JsonNode root = mapper.readTree(phonePeResponse.getBody());
 
-	    String state = root.path("data").path("state").asText();
-	    String redirectUrl = root.path("data").path("redirectUrl").asText("");
+	    // ✅ HANDLE BOTH PHONEPE RESPONSE FORMATS
+	    JsonNode dataNode = root.has("data") ? root.get("data") : root;
+
+	    String state = dataNode.path("state").asText();
+	    String redirectUrl = dataNode.path("redirectUrl").asText();
 
 	    PayinRecords savedRecord;
 
-	    // ---------------- SAVE DIRECTLY (NO EXTRA METHOD) ----------------
+	    // ====================================================
+	    // 🔒 SAVE PAYIN (ONLY IF STATE = PENDING)
+	    // ====================================================
 	    synchronized (this) {
 
 	        PayinRecords r = new PayinRecords();
@@ -1900,6 +1906,7 @@ public class ClientServiceImpl implements ClientService {
 	        r.setEmail(data.getEmail());
 	        r.setMobile(data.getMobile());
 	        r.setAddress(data.getAddress());
+	        r.setPaymentMethod(data.getPaymentMethod());
 
 	        r.setAmount(toBigDecimal(calc.get("amount")).doubleValue());
 	        r.setCharges(toBigDecimal(calc.get("charges")).doubleValue());
@@ -1911,18 +1918,21 @@ public class ClientServiceImpl implements ClientService {
 	        );
 	        r.setFinalAmount(toBigDecimal(calc.get("netAmount")).doubleValue());
 
+	        // ✅ PAYIN IS NOT SETTLED YET
 	        r.setSettlementStatus("PENDING");
 	        r.setStatus("PENDING");
 	        r.setStatusCode("TXNP");
 
-	        // save redirect url from PhonePe
+	        // ✅ STORE REDIRECT URL (TRANSIENT)
 	        r.setRedirect_route(redirectUrl);
 
 	        payinRepository.save(r);
 	        savedRecord = r;
 	    }
 
-	    // ---------------- RESPONSE ----------------
+	    // ====================================================
+	    // ✅ FINAL RESPONSE TO CLIENT
+	    // ====================================================
 	    Map<String, Object> response = new HashMap<>();
 	    response.put("name", savedRecord.getName());
 	    response.put("email", savedRecord.getEmail());
@@ -1930,7 +1940,7 @@ public class ClientServiceImpl implements ClientService {
 	    response.put("address", savedRecord.getAddress());
 	    response.put("amount", savedRecord.getAmount());
 	    response.put("orderId", savedRecord.getOrderId());
-	    response.put("redirect_url", savedRecord.getRedirect_route());
+	    response.put("redirect_url", redirectUrl);
 	    response.put("status", savedRecord.getStatus());
 	    response.put("statusCode", savedRecord.getStatusCode());
 	    response.put("createdDate", savedRecord.getCreatedDate());
@@ -1938,10 +1948,10 @@ public class ClientServiceImpl implements ClientService {
 	    response.put("charges", savedRecord.getCharges());
 	    response.put("gstCharges", savedRecord.getGstCharges());
 	    response.put("userId", savedRecord.getUserId());
-	    response.put("redirect_url", redirectUrl);
 
 	    return ResponseEntity.ok(response);
 	}
+
 
 
 	    // CHARGES CALCULATION
