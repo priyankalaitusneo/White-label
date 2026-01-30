@@ -1928,6 +1928,7 @@ public class ClientServiceImpl implements ClientService {
 	        r.setRedirect_route(redirectUrl);
 
 	        payinRepository.save(r);
+	        System.out.println(r+"save record");
 	        savedRecord = r;
 	    }
 
