@@ -1816,71 +1816,98 @@ public class ClientServiceImpl implements ClientService {
             HttpServletRequest req) throws Exception {
 
         logger.info("PayIn request initiated for userId: {} | orderId: {}", data.getUserId(), data.getOrderId());
-        
+
         try {
             // ---------------- AUTH ----------------
             logger.debug("Validating authentication for userId: {} | clientId: {}", data.getUserId(), clientId);
+            
             if (!isAuthenticated(clientId, clientSecretId, data.getUserId())) {
                 logger.warn("Authentication failed for userId: {} | clientId: {}", data.getUserId(), clientId);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(buildErrorResponse("UNAUTHORIZED", "Authentication failed"));
+                        .body(ResponseDto.builder()
+                                .status("BAD_REQUEST")
+                                .message("Error")
+                                .data("Authentication failed")
+                                .build());
             }
+            
             logger.info("Authentication successful for userId: {}", data.getUserId());
 
             // ---------------- CLIENT ----------------
             logger.debug("Fetching client details for userId: {}", data.getUserId());
+            
             Optional<Client> client = clientRepository.findByUserId(data.getUserId());
             if (client.isEmpty()) {
                 logger.error("Client not found for userId: {}", data.getUserId());
                 return ResponseEntity.badRequest()
-                        .body(buildErrorResponse("BAD_REQUEST", "Invalid client-id"));
+                        .body(ResponseDto.builder()
+                                .status("BAD_REQUEST")
+                                .message("Error")
+                                .data("Invalid client-id")
+                                .build());
             }
+            
             logger.info("Client found for userId: {}", data.getUserId());
 
-            // ---------------- IP WHITELIST CHECK ----------------
+            // ---------------- IP ----------------
             String ip = ipFetching.getClientIP(req);
             logger.debug("Client IP detected: {} for userId: {}", ip, data.getUserId());
+            System.out.println(ip);
             
             Optional<IpAddress> ipEntity = ipRepository.findByUserId(data.getUserId());
-            if (ipEntity.isEmpty()) {
-                logger.error("No whitelisted IP found for userId: {}", data.getUserId());
+            if (ipEntity.isEmpty() || !ip.equals(ipEntity.get().getIpAddress())) {
+                logger.error("IP validation failed for userId: {} | Detected IP: {} | Whitelisted: {}", 
+                        data.getUserId(), ip, ipEntity.isPresent() ? ipEntity.get().getIpAddress() : "None");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(buildErrorResponse("UNAUTHORIZED", "No IP whitelisted for this user"));
+                        .body(ResponseDto.builder()
+                                .status("BAD_REQUEST")
+                                .message("ERROR")
+                                .data("IP not whitelisted")
+                                .build());
             }
             
-            if (!ip.equals(ipEntity.get().getIpAddress())) {
-                logger.warn("IP mismatch for userId: {} | Detected IP: {} | Whitelisted IP: {}", 
-                        data.getUserId(), ip, ipEntity.get().getIpAddress());
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(buildErrorResponse("UNAUTHORIZED", "IP not whitelisted"));
-            }
             logger.info("IP whitelisted successfully for userId: {} | IP: {}", data.getUserId(), ip);
 
-            // ---------------- ORDER VALIDATION ----------------
+            // ---------------- ORDER ----------------
             logger.debug("Validating orderId: {}", data.getOrderId());
+            
             if (data.getOrderId() == null || data.getOrderId().isBlank()) {
                 logger.error("OrderId is mandatory but not provided for userId: {}", data.getUserId());
                 return ResponseEntity.badRequest()
-                        .body(buildErrorResponse("BAD_REQUEST", "OrderId is mandatory"));
+                        .body(ResponseDto.builder()
+                                .status("BAD_REQUEST")
+                                .message("Error")
+                                .data("OrderId is mandatory")
+                                .build());
             }
 
-            PayinRecords existingOrder = payinRepository.findByOrderId(data.getOrderId());
-            if (existingOrder != null) {
+            if (payinRepository.findByOrderId(data.getOrderId()) != null) {
                 logger.warn("Duplicate orderId detected: {} for userId: {}", data.getOrderId(), data.getUserId());
                 return ResponseEntity.badRequest()
-                        .body(buildErrorResponse("BAD_REQUEST", "Duplicate OrderId"));
+                        .body(ResponseDto.builder()
+                                .status("BAD_REQUEST")
+                                .message("Error")
+                                .data("Duplicate OrderId")
+                                .build());
             }
+            
             logger.info("OrderId validation successful: {}", data.getOrderId());
 
-            // ---------------- CHARGES CALCULATION ----------------
+            // ---------------- CHARGES (UNCHANGED) ----------------
             logger.debug("Calculating charges for orderId: {} | Amount: {}", data.getOrderId(), data.getAmount());
+            
             Map<String, Object> calc = payinChargesCalculations(data);
             if (!Boolean.TRUE.equals(calc.get("configured"))) {
                 logger.error("Charge calculation failed for orderId: {} | Error: {}", 
                         data.getOrderId(), calc.get("error"));
                 return ResponseEntity.badRequest()
-                        .body(buildErrorResponse("BAD_REQUEST", calc.get("error").toString()));
+                        .body(ResponseDto.builder()
+                                .status("BAD_REQUEST")
+                                .message("Error")
+                                .data(calc.get("error"))
+                                .build());
             }
+            
             logger.info("Charges calculated successfully for orderId: {} | Charges: {} | GST: {} | Net: {}", 
                     data.getOrderId(), calc.get("charges"), calc.get("gstCharges"), calc.get("netAmount"));
 
@@ -1896,28 +1923,34 @@ public class ClientServiceImpl implements ClientService {
                 logger.info("PhonePe API responded for orderId: {} | HTTP Status: {}", 
                         data.getOrderId(), phonePeResponse.getStatusCode());
                 logger.debug("PhonePe raw response: {}", phonePeResponse.getBody());
-                
             } catch (HttpClientErrorException e) {
                 logger.error("PhonePe API client error for orderId: {} | Status: {} | Response: {}", 
                         data.getOrderId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
                 return ResponseEntity.status(e.getStatusCode())
-                        .body(buildErrorResponse("PHONEPE_ERROR", "PhonePe payment initiation failed: " + e.getMessage()));
-                
+                        .body(ResponseDto.builder()
+                                .status("PHONEPE_ERROR")
+                                .message("Error")
+                                .data("PhonePe payment initiation failed: " + e.getMessage())
+                                .build());
             } catch (HttpServerErrorException e) {
                 logger.error("PhonePe API server error for orderId: {} | Status: {} | Response: {}", 
                         data.getOrderId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                        .body(buildErrorResponse("PHONEPE_SERVER_ERROR", "PhonePe service temporarily unavailable"));
-                
+                        .body(ResponseDto.builder()
+                                .status("PHONEPE_SERVER_ERROR")
+                                .message("Error")
+                                .data("PhonePe service temporarily unavailable")
+                                .build());
             } catch (Exception e) {
                 logger.error("Unexpected error calling PhonePe API for orderId: {}", data.getOrderId(), e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(buildErrorResponse("INTERNAL_ERROR", "Payment processing failed"));
+                        .body(ResponseDto.builder()
+                                .status("INTERNAL_ERROR")
+                                .message("Error")
+                                .data("Payment processing failed")
+                                .build());
             }
 
-            // ====================================================
-            // PARSE PHONEPE RESPONSE
-            // ====================================================
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root;
             try {
@@ -1925,114 +1958,110 @@ public class ClientServiceImpl implements ClientService {
             } catch (Exception e) {
                 logger.error("Failed to parse PhonePe response for orderId: {}", data.getOrderId(), e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(buildErrorResponse("PARSE_ERROR", "Failed to parse payment gateway response"));
+                        .body(ResponseDto.builder()
+                                .status("PARSE_ERROR")
+                                .message("Error")
+                                .data("Failed to parse payment gateway response")
+                                .build());
             }
 
             // ✅ HANDLE BOTH PHONEPE RESPONSE FORMATS
             JsonNode dataNode = root.has("data") ? root.get("data") : root;
+
             String state = dataNode.path("state").asText();
             String redirectUrl = dataNode.path("redirectUrl").asText();
-            String transactionId = dataNode.path("transactionId").asText("");
 
-            logger.info("PhonePe payment state for orderId: {} | State: {} | TxnId: {} | Redirect URL present: {}", 
-                    data.getOrderId(), state, transactionId, !redirectUrl.isEmpty());
+            logger.info("PhonePe payment state for orderId: {} | State: {} | Redirect URL present: {}", 
+                    data.getOrderId(), state, !redirectUrl.isEmpty());
 
-            if (redirectUrl == null || redirectUrl.isEmpty()) {
-                logger.error("PhonePe did not return redirect URL for orderId: {}", data.getOrderId());
-                return ResponseEntity.badRequest()
-                        .body(buildErrorResponse("PHONEPE_ERROR", "Payment gateway did not return redirect URL"));
-            }
-
-            // ====================================================
-            // 🔒 CONDITIONAL SAVE - ONLY IF STATE = PENDING
-            // ====================================================
-            
-            if (!"PENDING".equalsIgnoreCase(state)) {
-                logger.warn("PhonePe returned non-PENDING state | OrderId: {} | State: {} | Not saving to database", 
-                        data.getOrderId(), state);
-                
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("orderId", data.getOrderId());
-                errorResponse.put("status", state);
-                errorResponse.put("message", "Payment not initiated - status: " + state);
-                errorResponse.put("redirect_url", redirectUrl);
-                
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(buildErrorResponse("PAYMENT_NOT_PENDING", 
-                                "Payment gateway returned status: " + state));
-            }
-
-            // ====================================================
-            // ✅ SAVE PAYIN RECORD (ONLY WHEN STATE = PENDING)
-            // ====================================================
             PayinRecords savedRecord;
-            try {
-                synchronized (this) {
-                    logger.debug("Saving PayIn record for orderId: {} with PENDING status", data.getOrderId());
-                    
-                    PayinRecords r = new PayinRecords();
 
-                    r.setOrderId(data.getOrderId());
-                    r.setUserId(data.getUserId());
-                    r.setName(data.getName());
-                    r.setEmail(data.getEmail());
-                    r.setMobile(data.getMobile());
-                    r.setAddress(data.getAddress());
-                    r.setPaymentMethod(data.getPaymentMethod());
+            // ====================================================
+            // 🔒 SAVE PAYIN (ONLY IF STATE = PENDING)
+            // ====================================================
+            synchronized (this) {
+                logger.debug("Saving PayIn record for orderId: {}", data.getOrderId());
 
-                    r.setAmount(toBigDecimal(calc.get("amount")).doubleValue());
-                    r.setCharges(toBigDecimal(calc.get("charges")).doubleValue());
-                    r.setGstCharges(toBigDecimal(calc.get("gstCharges")).doubleValue());
-                    r.setTotalCharges(
-                            toBigDecimal(calc.get("charges"))
-                                    .add(toBigDecimal(calc.get("gstCharges")))
-                                    .doubleValue()
-                    );
-                    r.setFinalAmount(toBigDecimal(calc.get("netAmount")).doubleValue());
+                PayinRecords r = new PayinRecords();
 
-                    // ✅ PAYIN IS NOT SETTLED YET
-                    r.setSettlementStatus("PENDING");
-                    r.setStatus("PENDING");
-                    r.setStatusCode("TXNP");
+                r.setOrderId(data.getOrderId());
+                r.setUserId(data.getUserId());
+                r.setName(data.getName());
+                r.setEmail(data.getEmail());
+                r.setMobile(data.getMobile());
+                r.setAddress(data.getAddress());
+                r.setPaymentMethod(data.getPaymentMethod());
 
-                    // ✅ STORE TRANSACTION ID IF AVAILABLE
-                    if (transactionId != null && !transactionId.isEmpty()) {
-                        r.setTrxnid(transactionId);
-                    }
+                r.setAmount(toBigDecimal(calc.get("amount")).doubleValue());
+                r.setCharges(toBigDecimal(calc.get("charges")).doubleValue());
+                r.setGstCharges(toBigDecimal(calc.get("gstCharges")).doubleValue());
+                r.setTotalCharges(
+                        toBigDecimal(calc.get("charges"))
+                                .add(toBigDecimal(calc.get("gstCharges")))
+                                .doubleValue()
+                );
+                r.setFinalAmount(toBigDecimal(calc.get("netAmount")).doubleValue());
 
-                    // ✅ STORE REDIRECT URL (TRANSIENT)
-                    r.setRedirect_route(redirectUrl);
+                // ✅ PAYIN IS NOT SETTLED YET
+                r.setSettlementStatus("PENDING");
+                r.setStatus("PENDING");
+                r.setStatusCode("TXNP");
 
-                    savedRecord = payinRepository.save(r);
-                    logger.info("PayIn record saved successfully | OrderId: {} | ID: {} | Status: PENDING", 
-                            savedRecord.getOrderId(), savedRecord.getId());
+                // ✅ STORE REDIRECT URL (TRANSIENT)
+                r.setRedirect_route(redirectUrl);
+
+                try {
+                    payinRepository.save(r);
+                    logger.info("PayIn record saved successfully | orderId: {} | Status: PENDING", data.getOrderId());
+                    System.out.println(r + "save record");
+                    savedRecord = r;
+                } catch (Exception e) {
+                    logger.error("Failed to save PayIn record for orderId: {}", data.getOrderId(), e);
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(ResponseDto.builder()
+                                    .status("DATABASE_ERROR")
+                                    .message("Error")
+                                    .data("Failed to save payment record")
+                                    .build());
                 }
-            } catch (Exception e) {
-                logger.error("Failed to save PayIn record for orderId: {}", data.getOrderId(), e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(buildErrorResponse("DATABASE_ERROR", "Failed to save payment record"));
             }
 
             // ====================================================
-            // ✅ BUILD AND RETURN SUCCESS RESPONSE
+            // ✅ FINAL RESPONSE TO CLIENT
             // ====================================================
-            Map<String, Object> response = buildSuccessResponse(savedRecord, redirectUrl);
-            logger.info("PayIn request completed successfully for orderId: {} | userId: {} | State: PENDING", 
+            Map<String, Object> response = new HashMap<>();
+            response.put("name", savedRecord.getName());
+            response.put("email", savedRecord.getEmail());
+            response.put("phone", savedRecord.getMobile());
+            response.put("address", savedRecord.getAddress());
+            response.put("amount", savedRecord.getAmount());
+            response.put("orderId", savedRecord.getOrderId());
+            response.put("redirect_url", redirectUrl);
+            response.put("status", savedRecord.getStatus());
+            response.put("statusCode", savedRecord.getStatusCode());
+            response.put("createdDate", savedRecord.getCreatedDate());
+            response.put("updatedDate", savedRecord.getUpdatedDate());
+            response.put("charges", savedRecord.getCharges());
+            response.put("gstCharges", savedRecord.getGstCharges());
+            response.put("userId", savedRecord.getUserId());
+
+            logger.info("PayIn request completed successfully for orderId: {} | userId: {}", 
                     data.getOrderId(), data.getUserId());
-            
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             logger.error("Unexpected error in paymentPayin for orderId: {} | userId: {}", 
                     data.getOrderId(), data.getUserId(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(buildErrorResponse("INTERNAL_ERROR", "An unexpected error occurred"));
+                    .body(ResponseDto.builder()
+                            .status("INTERNAL_ERROR")
+                            .message("Error")
+                            .data("An unexpected error occurred")
+                            .build());
         }
     }
 
-    // ====================================================
-    // HELPER METHODS
-    // ====================================================
 
     private Map<String, Object> buildErrorResponse(String status, String message) {
         Map<String, Object> error = new HashMap<>();
@@ -2062,7 +2091,7 @@ public class ClientServiceImpl implements ClientService {
         return response;
     }
 
-    // CHARGES CALCULATION 
+    // CHARGES CALCULATION - ENHANCED WITH LOGGING
     private Map<String, Object> payinChargesCalculations(PayinDto data) {
         logger.debug("Starting charge calculation for userId: {} | Amount: {}", 
                 data.getUserId(), data.getAmount());
@@ -2085,7 +2114,7 @@ public class ClientServiceImpl implements ClientService {
             logger.error("Charges not configured for userId: {} | Amount: {}", 
                     data.getUserId(), amount.doubleValue());
             map.put("configured", false);
-            map.put("error", "Charges not configured for this amount range");
+            map.put("error", "Charges not configured");
             return map;
         }
 
@@ -2114,10 +2143,9 @@ public class ClientServiceImpl implements ClientService {
                 amount, charges, gst, netAmount);
 
         if (netAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            logger.error("Net amount is invalid (<=0) after deductions | Amount: {} | Charges: {} | GST: {} | Net: {}", 
-                    amount, charges, gst, netAmount);
+            logger.error("Net amount is invalid (<=0) after deductions for userId: {}", data.getUserId());
             map.put("configured", false);
-            map.put("error", "Net amount invalid after deductions");
+            map.put("error", "Net amount invalid");
             return map;
         }
 
