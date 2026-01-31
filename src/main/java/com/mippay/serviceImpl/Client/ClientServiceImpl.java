@@ -1808,262 +1808,226 @@ public class ClientServiceImpl implements ClientService {
 	}
 
 	@Override
-    @Transactional
-    public ResponseEntity<?> paymentPayin(
-            PayinDto data,
-            String clientId,
-            String clientSecretId,
-            HttpServletRequest req) throws Exception {
+	@Transactional
+	public ResponseEntity<?> paymentPayin(
+	        PayinDto data,
+	        String clientId,
+	        String clientSecretId,
+	        HttpServletRequest req)  {
 
-        logger.info("PayIn request initiated for userId: {} | orderId: {}", data.getUserId(), data.getOrderId());
+	    logger.info("PayIn request initiated | userId={} | orderId={}",
+	            data.getUserId(), data.getOrderId());
+	    System.out.println("▶ PayIn START | userId=" + data.getUserId()
+	            + " | orderId=" + data.getOrderId());
 
-        try {
-            // ---------------- AUTH ----------------
-            logger.debug("Validating authentication for userId: {} | clientId: {}", data.getUserId(), clientId);
-            
-            if (!isAuthenticated(clientId, clientSecretId, data.getUserId())) {
-                logger.warn("Authentication failed for userId: {} | clientId: {}", data.getUserId(), clientId);
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ResponseDto.builder()
-                                .status("BAD_REQUEST")
-                                .message("Error")
-                                .data("Authentication failed")
-                                .build());
-            }
-            
-            logger.info("Authentication successful for userId: {}", data.getUserId());
+	    try {
+	        // ================= AUTH =================
+	        logger.debug("Validating authentication | userId={} | clientId={}",
+	                data.getUserId(), clientId);
 
-            // ---------------- CLIENT ----------------
-            logger.debug("Fetching client details for userId: {}", data.getUserId());
-            
-            Optional<Client> client = clientRepository.findByUserId(data.getUserId());
-            if (client.isEmpty()) {
-                logger.error("Client not found for userId: {}", data.getUserId());
-                return ResponseEntity.badRequest()
-                        .body(ResponseDto.builder()
-                                .status("BAD_REQUEST")
-                                .message("Error")
-                                .data("Invalid client-id")
-                                .build());
-            }
-            
-            logger.info("Client found for userId: {}", data.getUserId());
+	        if (!isAuthenticated(clientId, clientSecretId, data.getUserId())) {
+	            logger.warn("Authentication failed | userId={} | clientId={}",
+	                    data.getUserId(), clientId);
+	            System.out.println("❌ AUTH FAILED");
 
-            // ---------------- IP ----------------
-            String ip = ipFetching.getClientIP(req);
-            logger.debug("Client IP detected: {} for userId: {}", ip, data.getUserId());
-            System.out.println(ip);
-            
-            Optional<IpAddress> ipEntity = ipRepository.findByUserId(data.getUserId());
-            if (ipEntity.isEmpty() || !ip.equals(ipEntity.get().getIpAddress())) {
-                logger.error("IP validation failed for userId: {} | Detected IP: {} | Whitelisted: {}", 
-                        data.getUserId(), ip, ipEntity.isPresent() ? ipEntity.get().getIpAddress() : "None");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ResponseDto.builder()
-                                .status("BAD_REQUEST")
-                                .message("ERROR")
-                                .data("IP not whitelisted")
-                                .build());
-            }
-            
-            logger.info("IP whitelisted successfully for userId: {} | IP: {}", data.getUserId(), ip);
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                    .body(ResponseDto.builder()
+	                            .status("BAD_REQUEST")
+	                            .message("Error")
+	                            .data("Authentication failed")
+	                            .build());
+	        }
 
-            // ---------------- ORDER ----------------
-            logger.debug("Validating orderId: {}", data.getOrderId());
-            
-            if (data.getOrderId() == null || data.getOrderId().isBlank()) {
-                logger.error("OrderId is mandatory but not provided for userId: {}", data.getUserId());
-                return ResponseEntity.badRequest()
-                        .body(ResponseDto.builder()
-                                .status("BAD_REQUEST")
-                                .message("Error")
-                                .data("OrderId is mandatory")
-                                .build());
-            }
+	        logger.info("Authentication successful | userId={}", data.getUserId());
+	        System.out.println("✅ AUTH OK");
 
-            if (payinRepository.findByOrderId(data.getOrderId()) != null) {
-                logger.warn("Duplicate orderId detected: {} for userId: {}", data.getOrderId(), data.getUserId());
-                return ResponseEntity.badRequest()
-                        .body(ResponseDto.builder()
-                                .status("BAD_REQUEST")
-                                .message("Error")
-                                .data("Duplicate OrderId")
-                                .build());
-            }
-            
-            logger.info("OrderId validation successful: {}", data.getOrderId());
+	        // ================= CLIENT =================
+	        logger.debug("Fetching client | userId={}", data.getUserId());
+	        Optional<Client> client = clientRepository.findByUserId(data.getUserId());
 
-            // ---------------- CHARGES (UNCHANGED) ----------------
-            logger.debug("Calculating charges for orderId: {} | Amount: {}", data.getOrderId(), data.getAmount());
-            
-            Map<String, Object> calc = payinChargesCalculations(data);
-            if (!Boolean.TRUE.equals(calc.get("configured"))) {
-                logger.error("Charge calculation failed for orderId: {} | Error: {}", 
-                        data.getOrderId(), calc.get("error"));
-                return ResponseEntity.badRequest()
-                        .body(ResponseDto.builder()
-                                .status("BAD_REQUEST")
-                                .message("Error")
-                                .data(calc.get("error"))
-                                .build());
-            }
-            
-            logger.info("Charges calculated successfully for orderId: {} | Charges: {} | GST: {} | Net: {}", 
-                    data.getOrderId(), calc.get("charges"), calc.get("gstCharges"), calc.get("netAmount"));
+	        if (client.isEmpty()) {
+	            logger.error("Client not found | userId={}", data.getUserId());
+	            System.out.println("❌ CLIENT NOT FOUND");
 
-            // ====================================================
-            // 🔴 CALL PHONEPE CHECKOUT API
-            // ====================================================
-            logger.info("Initiating PhonePe payment for orderId: {} | Amount: {}", 
-                    data.getOrderId(), data.getAmount());
-            
-            ResponseEntity<String> phonePeResponse;
-            try {
-                phonePeResponse = phonePeCreatePayment(data);
-                logger.info("PhonePe API responded for orderId: {} | HTTP Status: {}", 
-                        data.getOrderId(), phonePeResponse.getStatusCode());
-                logger.debug("PhonePe raw response: {}", phonePeResponse.getBody());
-            } catch (HttpClientErrorException e) {
-                logger.error("PhonePe API client error for orderId: {} | Status: {} | Response: {}", 
-                        data.getOrderId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
-                return ResponseEntity.status(e.getStatusCode())
-                        .body(ResponseDto.builder()
-                                .status("PHONEPE_ERROR")
-                                .message("Error")
-                                .data("PhonePe payment initiation failed: " + e.getMessage())
-                                .build());
-            } catch (HttpServerErrorException e) {
-                logger.error("PhonePe API server error for orderId: {} | Status: {} | Response: {}", 
-                        data.getOrderId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
-                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                        .body(ResponseDto.builder()
-                                .status("PHONEPE_SERVER_ERROR")
-                                .message("Error")
-                                .data("PhonePe service temporarily unavailable")
-                                .build());
-            } catch (Exception e) {
-                logger.error("Unexpected error calling PhonePe API for orderId: {}", data.getOrderId(), e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ResponseDto.builder()
-                                .status("INTERNAL_ERROR")
-                                .message("Error")
-                                .data("Payment processing failed")
-                                .build());
-            }
+	            return ResponseEntity.badRequest()
+	                    .body(ResponseDto.builder()
+	                            .status("BAD_REQUEST")
+	                            .message("Error")
+	                            .data("Invalid client-id")
+	                            .build());
+	        }
 
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root;
-            try {
-                root = mapper.readTree(phonePeResponse.getBody());
-            } catch (Exception e) {
-                logger.error("Failed to parse PhonePe response for orderId: {}", data.getOrderId(), e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ResponseDto.builder()
-                                .status("PARSE_ERROR")
-                                .message("Error")
-                                .data("Failed to parse payment gateway response")
-                                .build());
-            }
+	        logger.info("Client found | userId={}", data.getUserId());
+	        System.out.println("✅ CLIENT OK");
 
-            // ✅ HANDLE BOTH PHONEPE RESPONSE FORMATS
-            JsonNode dataNode = root.has("data") ? root.get("data") : root;
+	        // ================= IP =================
+	        String ip = ipFetching.getClientIP(req);
+	        System.out.println("Client IP = " + ip);
+	        logger.debug("Detected IP={} | userId={}", ip, data.getUserId());
 
-            String state = dataNode.path("state").asText();
-            String redirectUrl = dataNode.path("redirectUrl").asText();
+	        Optional<IpAddress> ipEntity = ipRepository.findByUserId(data.getUserId());
 
-            logger.info("PhonePe payment state for orderId: {} | State: {} | Redirect URL present: {}", 
-                    data.getOrderId(), state, !redirectUrl.isEmpty());
+	        if (ipEntity.isEmpty() || !ip.equals(ipEntity.get().getIpAddress())) {
+	            logger.error("IP NOT WHITELISTED | userId={} | detectedIP={} | whitelistedIP={}",
+	                    data.getUserId(),
+	                    ip,
+	                    ipEntity.isPresent() ? ipEntity.get().getIpAddress() : "NONE");
+	            System.out.println("❌ IP NOT WHITELISTED");
 
-            PayinRecords savedRecord;
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                    .body(ResponseDto.builder()
+	                            .status("BAD_REQUEST")
+	                            .message("ERROR")
+	                            .data("IP not whitelisted")
+	                            .build());
+	        }
 
-            // ====================================================
-            // 🔒 SAVE PAYIN (ONLY IF STATE = PENDING)
-            // ====================================================
-            synchronized (this) {
-                logger.debug("Saving PayIn record for orderId: {}", data.getOrderId());
+	        logger.info("IP whitelisted | userId={} | ip={}", data.getUserId(), ip);
+	        System.out.println("✅ IP OK");
 
-                PayinRecords r = new PayinRecords();
+	        // ================= ORDER =================
+	        logger.debug("Validating orderId={}", data.getOrderId());
 
-                r.setOrderId(data.getOrderId());
-                r.setUserId(data.getUserId());
-                r.setName(data.getName());
-                r.setEmail(data.getEmail());
-                r.setMobile(data.getMobile());
-                r.setAddress(data.getAddress());
-                r.setPaymentMethod(data.getPaymentMethod());
+	        if (data.getOrderId() == null || data.getOrderId().isBlank()) {
+	            logger.error("OrderId missing | userId={}", data.getUserId());
+	            System.out.println("❌ ORDER ID MISSING");
 
-                r.setAmount(toBigDecimal(calc.get("amount")).doubleValue());
-                r.setCharges(toBigDecimal(calc.get("charges")).doubleValue());
-                r.setGstCharges(toBigDecimal(calc.get("gstCharges")).doubleValue());
-                r.setTotalCharges(
-                        toBigDecimal(calc.get("charges"))
-                                .add(toBigDecimal(calc.get("gstCharges")))
-                                .doubleValue()
-                );
-                r.setFinalAmount(toBigDecimal(calc.get("netAmount")).doubleValue());
+	            return ResponseEntity.badRequest()
+	                    .body(ResponseDto.builder()
+	                            .status("BAD_REQUEST")
+	                            .message("Error")
+	                            .data("OrderId is mandatory")
+	                            .build());
+	        }
 
-                // ✅ PAYIN IS NOT SETTLED YET
-                r.setSettlementStatus("PENDING");
-                r.setStatus("PENDING");
-                r.setStatusCode("TXNP");
+	        if (payinRepository.findByOrderId(data.getOrderId()) != null) {
+	            logger.warn("Duplicate OrderId | orderId={}", data.getOrderId());
+	            System.out.println("❌ DUPLICATE ORDER ID");
 
-                // ✅ STORE REDIRECT URL (TRANSIENT)
-                r.setRedirect_route(redirectUrl);
+	            return ResponseEntity.badRequest()
+	                    .body(ResponseDto.builder()
+	                            .status("BAD_REQUEST")
+	                            .message("Error")
+	                            .data("Duplicate OrderId")
+	                            .build());
+	        }
 
-                try {
-                    payinRepository.save(r);
-                    logger.info("PayIn record saved successfully | orderId: {} | Status: PENDING", data.getOrderId());
-                    System.out.println(r + "save record");
-                    savedRecord = r;
-                } catch (Exception e) {
-                    logger.error("Failed to save PayIn record for orderId: {}", data.getOrderId(), e);
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(ResponseDto.builder()
-                                    .status("DATABASE_ERROR")
-                                    .message("Error")
-                                    .data("Failed to save payment record")
-                                    .build());
-                }
-            }
+	        logger.info("OrderId validation passed | orderId={}", data.getOrderId());
+	        System.out.println("✅ ORDER ID OK");
 
-            // ====================================================
-            // ✅ FINAL RESPONSE TO CLIENT
-            // ====================================================
-            Map<String, Object> response = new HashMap<>();
-            response.put("name", savedRecord.getName());
-            response.put("email", savedRecord.getEmail());
-            response.put("phone", savedRecord.getMobile());
-            response.put("address", savedRecord.getAddress());
-            response.put("amount", savedRecord.getAmount());
-            response.put("orderId", savedRecord.getOrderId());
-            response.put("redirect_url", redirectUrl);
-            response.put("status", savedRecord.getStatus());
-            response.put("statusCode", savedRecord.getStatusCode());
-            response.put("createdDate", savedRecord.getCreatedDate());
-            response.put("updatedDate", savedRecord.getUpdatedDate());
-            response.put("charges", savedRecord.getCharges());
-            response.put("gstCharges", savedRecord.getGstCharges());
-            response.put("userId", savedRecord.getUserId());
+	        // ================= CHARGES =================
+	        logger.debug("Calculating charges | orderId={} | amount={}",
+	                data.getOrderId(), data.getAmount());
 
-            logger.info("PayIn request completed successfully for orderId: {} | userId: {}", 
-                    data.getOrderId(), data.getUserId());
+	        Map<String, Object> calc = payinChargesCalculations(data);
 
-            return ResponseEntity.ok(
-            	    buildSuccessResponse(savedRecord, redirectUrl)
-            	);
+	        if (!Boolean.TRUE.equals(calc.get("configured"))) {
+	            logger.error("Charge calculation failed | orderId={} | error={}",
+	                    data.getOrderId(), calc.get("error"));
+	            System.out.println("❌ CHARGE CALC FAILED");
 
-        } catch (Exception e) {
-            logger.error("Unexpected error in paymentPayin for orderId: {} | userId: {}", 
-                    data.getOrderId(), data.getUserId(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ResponseDto.builder()
-                            .status("INTERNAL_ERROR")
-                            .message("Error")
-                            .data("An unexpected error occurred")
-                            .build());
-        }
-    }
+	            return ResponseEntity.badRequest()
+	                    .body(ResponseDto.builder()
+	                            .status("BAD_REQUEST")
+	                            .message("Error")
+	                            .data(calc.get("error"))
+	                            .build());
+	        }
 
+	        logger.info("Charges calculated | orderId={} | charges={} | gst={} | net={}",
+	                data.getOrderId(),
+	                calc.get("charges"),
+	                calc.get("gstCharges"),
+	                calc.get("netAmount"));
+	        System.out.println("✅ CHARGES OK");
+
+	        // ================= PHONEPE =================
+	        logger.info("Calling PhonePe | orderId={} | amount={}",
+	                data.getOrderId(), data.getAmount());
+	        System.out.println("▶ CALLING PHONEPE");
+
+	        ResponseEntity<String> phonePeResponse;
+	        try {
+	            phonePeResponse = phonePeCreatePayment(data);
+	            logger.info("PhonePe response | status={}",
+	                    phonePeResponse.getStatusCode());
+	            logger.debug("PhonePe raw response={}",
+	                    phonePeResponse.getBody());
+	        } catch (Exception e) {
+	            logger.error("PhonePe API error | orderId={}", data.getOrderId(), e);
+	            System.out.println("❌ PHONEPE ERROR");
+
+	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                    .body(ResponseDto.builder()
+	                            .status("INTERNAL_ERROR")
+	                            .message("Error")
+	                            .data("Payment processing failed")
+	                            .build());
+	        }
+
+	        JsonNode root = new ObjectMapper().readTree(phonePeResponse.getBody());
+	        JsonNode dataNode = root.has("data") ? root.get("data") : root;
+
+	        String state = dataNode.path("state").asText();
+	        String redirectUrl = dataNode.path("redirectUrl").asText();
+
+	        logger.info("PhonePe parsed | state={} | redirectUrlPresent={}",
+	                state, !redirectUrl.isEmpty());
+	        System.out.println("PhonePe STATE = " + state);
+	        System.out.println("Redirect URL = " + redirectUrl);
+
+	        // ================= SAVE PAYIN =================
+	        PayinRecords r = new PayinRecords();
+
+	        r.setOrderId(data.getOrderId());
+	        r.setUserId(data.getUserId());
+	        r.setName(data.getName());
+	        r.setEmail(data.getEmail());
+	        r.setMobile(data.getMobile());
+	        r.setAddress(data.getAddress());
+	        r.setPaymentMethod(data.getPaymentMethod());
+
+	        r.setAmount(toBigDecimal(calc.get("amount")).doubleValue());
+	        r.setCharges(toBigDecimal(calc.get("charges")).doubleValue());
+	        r.setGstCharges(toBigDecimal(calc.get("gstCharges")).doubleValue());
+	        r.setTotalCharges(
+	                toBigDecimal(calc.get("charges"))
+	                        .add(toBigDecimal(calc.get("gstCharges")))
+	                        .doubleValue()
+	        );
+	        r.setFinalAmount(toBigDecimal(calc.get("netAmount")).doubleValue());
+
+	        r.setSettlementStatus("PENDING");
+	        r.setStatus("PENDING");
+	        r.setStatusCode("TXNP");
+	        r.setRedirect_route(redirectUrl);
+
+	        payinRepository.save(r);
+
+	        logger.info("PayIn saved successfully | orderId={}", data.getOrderId());
+	        System.out.println("✅ PAYIN SAVED");
+
+	        // ================= FINAL RESPONSE =================
+	        logger.info("Returning success response | orderId={}", data.getOrderId());
+	        System.out.println("▶ RETURNING SUCCESS RESPONSE");
+
+	        return ResponseEntity.ok(
+	                buildSuccessResponse(r, redirectUrl)
+	        );
+
+	    } catch (Exception e) {
+	        logger.error("Unexpected error in paymentPayin | orderId={}",
+	                data.getOrderId(), e);
+	        System.out.println("🔥 UNEXPECTED ERROR");
+
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                .body(ResponseDto.builder()
+	                        .status("INTERNAL_ERROR")
+	                        .message("Error")
+	                        .data("An unexpected error occurred")
+	                        .build());
+	    }
+	}
 
     private Map<String, Object> buildErrorResponse(String status, String message) {
         Map<String, Object> error = new HashMap<>();
