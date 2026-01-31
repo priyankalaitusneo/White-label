@@ -3,6 +3,9 @@ package com.mippay.controller;
 import com.mippay.dto.Admin.PayinDto;
 import com.mippay.dto.Client.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 import com.mippay.entity.Client.Client;
 import com.mippay.entity.Client.WebhookUrl;
 
@@ -18,6 +21,7 @@ import com.mippay.serviceImpl.Client.ClientServiceImpl;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,6 +54,14 @@ public class ClientControlller {
 
 	@Autowired
 	private WalletService walletService;
+	
+	
+	
+	 @Value("${phonepe.webhook.username}")
+	    private String webhookUsername;
+
+	    @Value("${phonepe.webhook.password}")
+	    private String webhookPassword;
 //
 //	@Autowired
 //	private TrexoService trexoService;
@@ -568,16 +580,87 @@ public class ClientControlller {
         ResponseEntity<?> response = this.clientService.payGorderCreate(data);
         return response;
     }
-    
-    @GetMapping("/callback")
-    public ResponseEntity<String> phonePeCallback(
-            @RequestParam String orderId) {
+  
+    /* =======================
+    PHONEPE WEBHOOK (S2S)
+ ======================= */
+ @PostMapping("/webhook")
+ public ResponseEntity<String> phonePeWebhook(
+         @RequestHeader(value = "Authorization", required = false) String authorization,
+         @RequestBody Map<String, Object> body
+ ) {
 
-        System.out.println("PHONEPE CALLBACK RECEIVED");
-        System.out.println("OrderId = " + orderId);
+     try {
+         /* =======================
+            AUTH VERIFICATION
+         ======================= */
+         if (authorization == null) {
+             logger.warn("PhonePe Webhook rejected: Missing Authorization header");
+             return ResponseEntity.status(401).body("UNAUTHORIZED");
+         }
 
-        return ResponseEntity.ok(
-                "Payment received successfully for orderId=" + orderId
-        );
-    }
+         String raw = webhookUsername + ":" + webhookPassword;
+         String expectedHash = sha256Hex(raw);
+         String expectedAuthHeader = "SHA256(" + expectedHash + ")";
+
+         if (!authorization.equals(expectedAuthHeader)) {
+             logger.warn("PhonePe Webhook rejected: Invalid Authorization");
+             return ResponseEntity.status(401).body("UNAUTHORIZED");
+         }
+
+         logger.info("PhonePe Webhook authentication successful");
+
+         /* =======================
+            BASIC PAYLOAD CHECK
+         ======================= */
+         Object eventObj = body.get("event");
+         Object payloadObj = body.get("payload");
+
+         if (!(eventObj instanceof String) || !(payloadObj instanceof Map)) {
+             logger.warn("PhonePe Webhook ignored: Invalid payload structure");
+             return ResponseEntity.ok("IGNORED");
+         }
+
+         String event = (String) eventObj;
+         Map<String, Object> payload = (Map<String, Object>) payloadObj;
+
+         logger.info("PhonePe Webhook received | event={}", event);
+
+         /* =======================
+            EVENT FILTERING
+         ======================= */
+         if (!"checkout.order.completed".equals(event)) {
+             logger.info("PhonePe Webhook ignored | unsupported event={}", event);
+             return ResponseEntity.ok("IGNORED");
+         }
+
+         /* =======================
+            BUSINESS FIELDS (SAFE)
+         ======================= */
+         String merchantOrderId = String.valueOf(payload.get("merchantOrderId"));
+         String state = String.valueOf(payload.get("state"));
+
+         logger.info("PhonePe Order Completed | orderId={} | state={}",
+                 merchantOrderId, state);
+
+         
+         return ResponseEntity.ok("SUCCESS");
+
+     } catch (Exception ex) {
+         logger.error("PhonePe Webhook processing failed", ex);
+         return ResponseEntity.status(500).body("ERROR");
+     }
+ }
+
+ private String sha256Hex(String value) throws Exception {
+	    MessageDigest md = MessageDigest.getInstance("SHA-256");
+	    byte[] digest = md.digest(value.getBytes(StandardCharsets.UTF_8));
+	    StringBuilder sb = new StringBuilder();
+	    for (byte b : digest) {
+	        sb.append(String.format("%02x", b));
+	    }
+	    return sb.toString();
+	}
+ 
+
 }
