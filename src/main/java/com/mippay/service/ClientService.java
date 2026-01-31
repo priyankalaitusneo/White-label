@@ -170,4 +170,6 @@ public interface ClientService {
 	ResponseEntity<?> paymentPayinPhonepe(@Valid PayinDto data, String clientId, String clientSecretId,
 			HttpServletRequest request) throws Exception;
 
+	String savePhonePeCallBack(Map<String, Object> request);
+
 }
