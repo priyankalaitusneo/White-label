@@ -3118,12 +3118,10 @@ public class ClientServiceImpl implements ClientService {
         map.put("MID", "408000147774040");
         map.put("UniqueRequestId", data.getOrderId());
         map.put("UserDefinedData", UserDefinedData);
-//        map.put("ProductData", "{'PaymentReason':'OnlineOrder for OrderNo-"+ data.getOrderId() +"','Size':'medium','AppName':'abc'}");
         map.put("RequestDateTime", "");
         map.put("RedirectUrl", "");
         map.put("TransactionData", TransactionData);
         map.put("OrderAmount", "20");
-//        map.put("OrderType", "");
         map.put("OrderAmountData", OrderAmountData);
         map.put("CustomerData", CustomerData);
         map.put("IntegrationData", IntegrationData);
