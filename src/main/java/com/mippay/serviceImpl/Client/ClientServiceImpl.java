@@ -2048,7 +2048,9 @@ public class ClientServiceImpl implements ClientService {
             logger.info("PayIn request completed successfully for orderId: {} | userId: {}", 
                     data.getOrderId(), data.getUserId());
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(
+            	    buildSuccessResponse(savedRecord, redirectUrl)
+            	);
 
         } catch (Exception e) {
             logger.error("Unexpected error in paymentPayin for orderId: {} | userId: {}", 
