@@ -67,7 +67,6 @@ public class SecurityConfig {
             "http://65.1.113.7:8084",
             "admin.mippay.meihitech.com",
             "merchant.mippay.meihitech.com"
-
         ));
 
         config.setAllowedMethods(List.of(

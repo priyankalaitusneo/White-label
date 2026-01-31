@@ -1,6 +1,7 @@
 package com.mippay.controller;
 
 import com.mippay.dto.Admin.ResponseDto;
+import com.mippay.dto.Client.ClientLoginResponse;
 import com.mippay.dto.Client.LoginRequest;
 import com.mippay.dto.Client.LoginResponse;
 
@@ -80,49 +81,48 @@ public class AuthController {
 
 
     /////////////// API to login admin ///////////////
-  
-//  
-//    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-//    	logger.info("POST /login → Login request received for username: {}", request.getUsername());
-//        /* authenticate the username and password */
-//        String authentication = this.doAuthenticate(request.getUsername(), request.getPassword());
-//        logger.info("POST /login → Authentication result for {}: {}", request.getUsername(), authentication);
-//        if (authentication.equals("Authenticated")) {
-//            UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
-//            logger.info("POST /login → UserDetails loaded for {}", request.getUsername());
-//            String adminId = this.adminRepository.findByEmail(userDetails.getUsername()).get().getAdminId();
-//            logger.info("POST /login → AdminId fetched: {}", adminId);
-//            /* Generate jwt token */
-//            String token = this.jwtHelper.generateToken(userDetails, adminId);
-//            logger.info("POST /login → JWT token generated for adminId: {}", adminId);
-//            /* Get UserDetails by email */
-//            User admin = this.adminService.getAdminByEmail(request.getUsername());
-//            logger.info("POST /login → Admin entity fetched for {}: {}", request.getUsername(), admin);
-//            List<String> roleIds = this.adminRoleService.getRoleByAdminId(admin.getAdminId());
-//            logger.info("POST /login → RoleIds fetched for {}: {}", admin.getAdminId(), roleIds);
-//            List<Map<String, Object>> roles = this.roleService.getRolesByRolesId(roleIds);
-//            logger.info("POST /login → Roles resolved: {}", roles);
-//            // Cookie creation
-//            Cookie cookie = new Cookie("admin-jwt", token);
-//            cookie.setHttpOnly(false);
-//            cookie.setSecure(false);
-//            cookie.setPath("/");
-//            cookie.setMaxAge(24 * 60 * 60);
-//            cookie.setAttribute("SameSite", "None");
-//            response.addCookie(cookie);
-//            logger.info("POST /login → JWT cookie added to response for user: {}", admin.getAdminId());
-//            LoginResponse resp = LoginResponse.builder()
-//                    .email(request.getUsername())
-//                    .userId(admin.getAdminId())
-//                    .role(roles)
-//                    .build();
-//            logger.info("POST /login → Login successful for {}, response: {}", request.getUsername(), resp);
-//            return ResponseEntity.ok(resp);
-//        } else {
-//        	logger.warn("POST /login → Authentication failed for {}", request.getUsername());
-//            return ResponseEntity.badRequest().body("Invalid username or password !!");
-//        }
-//    }
+    @PostMapping("/admin-login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+    	logger.info("POST /login → Login request received for username: {}", request.getUsername());
+        /* authenticate the username and password */
+        String authentication = this.doAuthenticate(request.getUsername(), request.getPassword());
+        logger.info("POST /login → Authentication result for {}: {}", request.getUsername(), authentication);
+        if (authentication.equals("Authenticated")) {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+            logger.info("POST /login → UserDetails loaded for {}", request.getUsername());
+            String adminId = this.adminRepository.findByEmail(userDetails.getUsername()).get().getAdminId();
+            logger.info("POST /login → AdminId fetched: {}", adminId);
+            /* Generate jwt token */
+            String token = this.jwtHelper.generateToken(userDetails, adminId);
+            logger.info("POST /login → JWT token generated for adminId: {}", adminId);
+            /* Get UserDetails by email */
+            User admin = this.adminService.getAdminByEmail(request.getUsername());
+            logger.info("POST /login → Admin entity fetched for {}: {}", request.getUsername(), admin);
+            List<String> roleIds = this.adminRoleService.getRoleByAdminId(admin.getAdminId());
+            logger.info("POST /login → RoleIds fetched for {}: {}", admin.getAdminId(), roleIds);
+            List<Map<String, Object>> roles = this.roleService.getRolesByRolesId(roleIds);
+            logger.info("POST /login → Roles resolved: {}", roles);
+            // Cookie creation
+            Cookie cookie = new Cookie("admin-jwt", token);
+            cookie.setHttpOnly(true);
+            cookie.setSecure(true);
+            cookie.setPath("/");
+            cookie.setMaxAge(24 * 60 * 60);
+            cookie.setAttribute("SameSite", "None");
+            response.addCookie(cookie);
+            logger.info("POST /login → JWT cookie added to response for user: {}", admin.getAdminId());
+            LoginResponse resp = LoginResponse.builder()
+                    .email(request.getUsername())
+                    .userId(admin.getAdminId())
+                    .role(roles)
+                    .build();
+            logger.info("POST /login → Login successful for {}, response: {}", request.getUsername(), resp);
+            return ResponseEntity.ok(resp);
+        } else {
+        	logger.warn("POST /login → Authentication failed for {}", request.getUsername());
+            return ResponseEntity.badRequest().body("Invalid username or password !!");
+        }
+    }
  
 
 
@@ -170,7 +170,7 @@ public class AuthController {
         LoginResponse resp = LoginResponse.builder()
                 .email(request.getUsername())
                 .userId(admin.getAdminId())
-                .token(adminToken)   
+//                .token(adminToken)
                 .role(roles)
                 .build();
 
@@ -202,71 +202,99 @@ public class AuthController {
     }
 
 
-       
     @PostMapping("/client-login")
-    public ResponseEntity<?> clientlogin(
-            @Valid @RequestBody LoginRequest request) {
-
+    public ResponseEntity<?> clientlogin(@Valid @RequestBody LoginRequest request, HttpServletResponse resp) {
         logger.info("POST /client-login → Login request received for username: {}", request.getUsername());
-
-        String authentication = this.doAuthenticate(
-                request.getUsername(),
-                request.getPassword()
-        );
-
-        logger.info("POST /client-login → Authentication result for {}: {}",
-                request.getUsername(), authentication);
-
-        if (!"Authenticated".equals(authentication)) {
+        /* authenticate the username and password */
+        String authentication = this.doAuthenticate(request.getUsername(), request.getPassword());
+        logger.info("POST /client-login → Authentication result for {}: {}", request.getUsername(), authentication);
+        if (authentication.equals("Authenticated")) {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+            logger.info("POST /client-login → UserDetails loaded for {}", request.getUsername());
+            String clientId = this.clientRepository.findByEmail(userDetails.getUsername()).get().getUserId();
+            logger.info("POST /client-login → ClientId fetched: {}", clientId);
+            /* Generate jwt token */
+            String token = this.jwtHelper.generateToken(userDetails, clientId);
+            logger.info("POST /client-login → JWT token generated for clientId: {}", clientId);
+            /* get UserDetails by email using loadUserByUsername method  */
+            Client client = this.clientService.getClientByEmail(request.getUsername());
+            logger.info("POST /client-login → Client entity fetched: {}", client);
+            // Creating cookie
+            Cookie cookie = new Cookie("client-jwt", token);
+            cookie.setHttpOnly(true);
+            cookie.setSecure(true);
+            cookie.setPath("/");
+            cookie.setMaxAge(24 * 60 * 60);
+            cookie.setAttribute("SameSite", "None");
+            resp.addCookie(cookie);
+            logger.info("POST /client-login → JWT cookie added for clientId: {}", client.getUserId());
+            ClientLoginResponse response = ClientLoginResponse.builder()
+                    .email(request.getUsername())
+                    .userId(client.getUserId())
+                    .build();
+            logger.info("POST /client-login → Login successful for {}, Response: {}", request.getUsername(), response);
+            return ResponseEntity.ok(response);
+        } else {
             logger.warn("POST /client-login → Authentication failed for {}", request.getUsername());
-            return ResponseEntity.badRequest()
-                    .body("Invalid username or password !!");
+            return ResponseEntity.badRequest().body("Invalid username or password !!");
         }
-
-        // Load user details
-        UserDetails userDetails =
-                userDetailsService.loadUserByUsername(request.getUsername());
-
-        logger.info("POST /client-login → UserDetails loaded for {}", request.getUsername());
-
-        // Fetch clientId
-        String clientId = clientRepository
-                .findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Client not found"))
-                .getUserId();
-
-        logger.info("POST /client-login → ClientId fetched: {}", clientId);
-
-        
-        String token = jwtHelper.generateToken(userDetails, clientId);
-
-        
-        String clientToken = "client-jwt:" + token;
-
-        // Fetch client entity (needed for response)
-        Client client = clientService.getClientByEmail(request.getUsername());
-
-        
-        LoginResponse response = LoginResponse.builder()
-                .email(request.getUsername())
-                .userId(client.getUserId())
-                .token(clientToken)   
-                .role(null)
-                .build();
-
-        logger.info("POST /client-login → Login successful for {}, response: {}",
-                request.getUsername(), response);
-
-        return ResponseEntity.ok(response);
     }
-
-    @PostMapping("/CallBack")
-    public String getChargesByUserId(@RequestBody Map<String, Object> request) {
-    	logger.info("POST /CallBack → Callback request received: {}", request);
-        String response = this.clientService.saveCallBack(request);
-        logger.info("POST /CallBack → Callback service response: {}", response);
-        return response;
-    }
+       
+//    @PostMapping("/client-login")
+//    public ResponseEntity<?> clientlogin(
+//            @Valid @RequestBody LoginRequest request) {
+//
+//        logger.info("POST /client-login → Login request received for username: {}", request.getUsername());
+//
+//        String authentication = this.doAuthenticate(
+//                request.getUsername(),
+//                request.getPassword()
+//        );
+//
+//        logger.info("POST /client-login → Authentication result for {}: {}",
+//                request.getUsername(), authentication);
+//
+//        if (!"Authenticated".equals(authentication)) {
+//            logger.warn("POST /client-login → Authentication failed for {}", request.getUsername());
+//            return ResponseEntity.badRequest()
+//                    .body("Invalid username or password !!");
+//        }
+//
+//        // Load user details
+//        UserDetails userDetails =
+//                userDetailsService.loadUserByUsername(request.getUsername());
+//
+//        logger.info("POST /client-login → UserDetails loaded for {}", request.getUsername());
+//
+//        // Fetch clientId
+//        String clientId = clientRepository
+//                .findByEmail(userDetails.getUsername())
+//                .orElseThrow(() -> new RuntimeException("Client not found"))
+//                .getUserId();
+//
+//        logger.info("POST /client-login → ClientId fetched: {}", clientId);
+//        String token = jwtHelper.generateToken(userDetails, clientId);
+//        String clientToken = "client-jwt:" + token;
+//        // Fetch client entity (needed for response)
+//        Client client = clientService.getClientByEmail(request.getUsername());
+//        LoginResponse response = LoginResponse.builder()
+//                .email(request.getUsername())
+//                .userId(client.getUserId())
+////                .token(clientToken)
+//                .role(null)
+//                .build();
+//        logger.info("POST /client-login → Login successful for {}, response: {}",
+//                request.getUsername(), response);
+//        return ResponseEntity.ok(response);
+//    }
+//
+//    @PostMapping("/CallBack")
+//    public String getChargesByUserId(@RequestBody Map<String, Object> request) {
+//    	logger.info("POST /CallBack → Callback request received: {}", request);
+//        String response = this.clientService.saveCallBack(request);
+//        logger.info("POST /CallBack → Callback service response: {}", response);
+//        return response;
+//    }
 
 
     @PostMapping("/admin-logout")
