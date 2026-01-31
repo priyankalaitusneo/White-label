@@ -8,6 +8,8 @@ import lombok.ToString;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -68,9 +70,11 @@ public class PayinRecords {
     private String utr;
     private String orderId;
     // --------- Timestamps ---------
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     @Column(nullable = false)
     private LocalDateTime createdDate;
- 
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     @Column
     private LocalDateTime updatedDate;
  
