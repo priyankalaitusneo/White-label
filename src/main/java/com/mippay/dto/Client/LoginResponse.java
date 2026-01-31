@@ -15,6 +15,5 @@ import java.util.Map;
 public class LoginResponse {
     private String email;
     private String userId;
-    private String token;
     private List<Map<String,Object>> role;
 }
