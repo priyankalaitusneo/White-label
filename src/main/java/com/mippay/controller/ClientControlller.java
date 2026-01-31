@@ -589,6 +589,8 @@ public class ClientControlller {
          @RequestHeader(value = "Authorization", required = false) String authorization,
          @RequestBody Map<String, Object> body
  ) {
+	 
+	 System.out.println(authorization+";;;;;;;;;;;;;;;;;;;;;;");
 
      try {
          /* =======================
@@ -602,7 +604,7 @@ public class ClientControlller {
          String raw = webhookUsername + ":" + webhookPassword;
          String expectedHash = sha256Hex(raw);
          String expectedAuthHeader = "SHA256(" + expectedHash + ")";
-
+System.out.println(expectedAuthHeader+"ghjkjhgf");
          if (!authorization.equals(expectedAuthHeader)) {
              logger.warn("PhonePe Webhook rejected: Invalid Authorization");
              return ResponseEntity.status(401).body("UNAUTHORIZED");
