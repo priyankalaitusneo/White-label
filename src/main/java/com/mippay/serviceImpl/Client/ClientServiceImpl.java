@@ -2039,23 +2039,37 @@ public class ClientServiceImpl implements ClientService {
     }
 
     private Map<String, Object> buildSuccessResponse(PayinRecords record, String redirectUrl) {
+
         Map<String, Object> response = new HashMap<>();
+
         response.put("name", record.getName());
         response.put("email", record.getEmail());
         response.put("phone", record.getMobile());
         response.put("address", record.getAddress());
-        response.put("amount", record.getAmount());
+        response.put("amount", String.valueOf(record.getAmount()));
         response.put("orderId", record.getOrderId());
         response.put("redirect_url", redirectUrl);
         response.put("status", record.getStatus());
         response.put("statusCode", record.getStatusCode());
-        response.put("createdDate", record.getCreatedDate());
-        response.put("updatedDate", record.getUpdatedDate());
-        response.put("charges", record.getCharges());
-        response.put("gstCharges", record.getGstCharges());
+
+        // ✅ CRITICAL FIX
+        response.put("createdDate",
+                record.getCreatedDate() != null
+                        ? record.getCreatedDate().toString()
+                        : null);
+
+        response.put("updatedDate",
+                record.getUpdatedDate() != null
+                        ? record.getUpdatedDate().toString()
+                        : null);
+
+        response.put("charges", String.valueOf(record.getCharges()));
+        response.put("gstCharges", String.valueOf(record.getGstCharges()));
         response.put("userId", record.getUserId());
+
         return response;
     }
+
 
     // CHARGES CALCULATION - ENHANCED WITH LOGGING
     private Map<String, Object> payinChargesCalculations(PayinDto data) {
