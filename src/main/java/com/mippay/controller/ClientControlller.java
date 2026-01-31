@@ -568,4 +568,16 @@ public class ClientControlller {
         ResponseEntity<?> response = this.clientService.payGorderCreate(data);
         return response;
     }
+    
+    @GetMapping("/callback")
+    public ResponseEntity<String> phonePeCallback(
+            @RequestParam String orderId) {
+
+        System.out.println("PHONEPE CALLBACK RECEIVED");
+        System.out.println("OrderId = " + orderId);
+
+        return ResponseEntity.ok(
+                "Payment received successfully for orderId=" + orderId
+        );
+    }
 }
