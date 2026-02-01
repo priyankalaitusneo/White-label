@@ -1,5 +1,6 @@
 package com.mippay.service;
 
+import com.mippay.entity.Admin.PayInCharges;
 import com.mippay.entity.Client.Client;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -104,7 +105,7 @@ public interface AdminService {
 
 
 
-    ResponseEntity<?> addPayInCharges(PayInChargesRequestDto dto);
+    ResponseEntity<?> addPayInCharges(PayInCharges dto);
 
     ResponseEntity<?> updatePayInCharges(Long id, PayInChargesRequestDto dto);
 

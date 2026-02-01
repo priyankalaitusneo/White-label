@@ -680,7 +680,7 @@ public class AdminServiceImpl implements AdminService {
 
 	
 	@Override
-	public ResponseEntity<?> addPayInCharges(PayInChargesRequestDto dto) {
+	public ResponseEntity<?> addPayInCharges(PayInCharges dto) {
         logger.info("setCharges() → Request received to set charges for clientId: {}, range: {} - {}", dto.getUserId(),
                 dto.getFromRange(), dto.getToRange());
         List<PayInCharges> charges = this.payInChargesRepository.fetchByClientIdAndRange(dto.getUserId(), dto.getFromRange(),
