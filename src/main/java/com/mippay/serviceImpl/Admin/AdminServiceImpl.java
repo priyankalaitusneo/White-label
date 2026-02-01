@@ -639,17 +639,17 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
-	public ResponseEntity<List<ClientResponseDto>> getAllClients() {
+	public ResponseEntity<List<Client>> getAllClients() {
 		logger.info("getAllClients() → Fetching all client records");
 		try {
 			// Fetch all clients from the database
 			List<Client> clients = clientRepository.findAll();
 			logger.info("getAllClients() → {} clients found", clients.size());
-			// Convert Client entities to ClientResponseDto
-			List<ClientResponseDto> clientResponseList = clients.stream().map(this::convertToDto)
-					.collect(Collectors.toList());
-			logger.info("getAllClients() → Returning client response list");
-			return ResponseEntity.ok(clientResponseList);
+//			// Convert Client entities to ClientResponseDto
+//			List<ClientResponseDto> clientResponseList = clients.stream().map(this::convertToDto)
+//					.collect(Collectors.toList());
+//			logger.info("getAllClients() → Returning client response list");
+			return ResponseEntity.ok(clients);
 		} catch (Exception e) {
 			logger.error("getAllClients() → Error fetching all clients: {}", e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

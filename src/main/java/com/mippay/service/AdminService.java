@@ -1,5 +1,6 @@
 package com.mippay.service;
 
+import com.mippay.entity.Client.Client;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
@@ -30,7 +31,7 @@ public interface AdminService {
 
     ResponseEntity<?> approvePrefundRequest(PrefundApprovalDto approvalDto);
 
-    ResponseEntity<List<ClientResponseDto>> getAllClients();
+    ResponseEntity<List<Client>> getAllClients();
 
     ResponseEntity<?> updateCharges(@Valid UpdateChargesDto data, HttpServletRequest req);
 
