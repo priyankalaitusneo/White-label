@@ -4,9 +4,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -59,10 +62,12 @@ public class Client implements UserDetails {
     private String virtualAccNo;
 
     @Column(name = "created_date", nullable = false)
-    private LocalDateTime createdDate;
+    @CreationTimestamp
+    private Date createdDate = new Date();
 
     @Column(name = "updated_date")
-    private LocalDateTime updatedDate;
+    @UpdateTimestamp
+    private Date updatedDate = new Date();
     
     private Double walletBalance;
     
@@ -75,22 +80,6 @@ public class Client implements UserDetails {
     @Column(name = "address", columnDefinition = "TEXT")
     private String address;
 
-
-    
-    @PrePersist
-    protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-        createdDate = now;
-        updatedDate = now; 
-        if (status == null) status = "ACTIVE";
-        if (accountBal == null) accountBal = BigDecimal.ZERO;
-
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedDate = LocalDateTime.now();
-    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
