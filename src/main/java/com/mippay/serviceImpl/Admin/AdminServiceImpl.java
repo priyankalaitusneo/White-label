@@ -657,26 +657,26 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	// Helper method to convert Client entity to ClientResponseDto
-	private ClientResponseDto convertToDto(Client client) {
-		logger.info("convertToDto() → Converting Client entity to DTO for userId: {}", client.getUserId());
-		ClientResponseDto dto = new ClientResponseDto();
-		dto.setUserId(client.getUserId());
-		dto.setName(client.getName());
-		dto.setEmail(client.getEmail());
-		dto.setMobileNum(client.getMobileNum());
-		dto.setStatus(client.getStatus());
-		dto.setAccountNum(client.getAccountNum());
-		dto.setIfscCode(client.getIfscCode());
-		dto.setGst(client.getGst());
-		dto.setCin(client.getCin());
-		dto.setAccountBal(client.getAccountBal());
-		dto.setMerchantType(client.getMerchantType());
-		dto.setCreatedDate(client.getCreatedDate());
-		dto.setUpdatedDate(client.getUpdatedDate());
-		
-		logger.info("convertToDto() → DTO conversion completed for userId: {}", client.getUserId());
-		return dto;
-	}
+//	private ClientResponseDto convertToDto(Client client) {
+//		logger.info("convertToDto() → Converting Client entity to DTO for userId: {}", client.getUserId());
+//		ClientResponseDto dto = new ClientResponseDto();
+//		dto.setUserId(client.getUserId());
+//		dto.setName(client.getName());
+//		dto.setEmail(client.getEmail());
+//		dto.setMobileNum(client.getMobileNum());
+//		dto.setStatus(client.getStatus());
+//		dto.setAccountNum(client.getAccountNum());
+//		dto.setIfscCode(client.getIfscCode());
+//		dto.setGst(client.getGst());
+//		dto.setCin(client.getCin());
+//		dto.setAccountBal(client.getAccountBal());
+//		dto.setMerchantType(client.getMerchantType());
+//		dto.setCreatedDate(client.getCreatedDate());
+//		dto.setUpdatedDate(client.getUpdatedDate());
+//
+//		logger.info("convertToDto() → DTO conversion completed for userId: {}", client.getUserId());
+//		return dto;
+//	}
 
 	
 	@Override
