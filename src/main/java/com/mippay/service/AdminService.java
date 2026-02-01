@@ -31,7 +31,7 @@ public interface AdminService {
 
     ResponseEntity<?> approvePrefundRequest(PrefundApprovalDto approvalDto);
 
-    ResponseEntity<List<Client>> getAllClients();
+    ResponseEntity<?> getAllClients();
 
     ResponseEntity<?> updateCharges(@Valid UpdateChargesDto data, HttpServletRequest req);
 

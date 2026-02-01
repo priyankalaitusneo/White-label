@@ -190,7 +190,7 @@ public class AdminController {
 	}
 
 	@GetMapping("/clients")
-	public ResponseEntity<List<Client>> getAllClients() {
+	public ResponseEntity<?> getAllClients() {
 		logger.info("GET /clients");
 		return adminService.getAllClients();
 	}

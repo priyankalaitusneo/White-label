@@ -639,7 +639,7 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
-	public ResponseEntity<List<Client>> getAllClients() {
+	public ResponseEntity<?> getAllClients() {
 		logger.info("getAllClients() → Fetching all client records");
 		try {
 			// Fetch all clients from the database
