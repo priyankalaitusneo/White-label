@@ -60,7 +60,7 @@ public class Generator {
     }
 
     public static String generateBuckBoxToken(){
-        String secretKey = "iif-dygvrzH-yzieNt14vXX93M1telw2U2nlbGv1Nng=";
+        String secretKey = "vqBCBlPbo4RaEmn7ClQGkUuBoUViyhBAB2GHtCDpmJ6PCdOnMGX4";
         Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
 
         Date now = new Date();
