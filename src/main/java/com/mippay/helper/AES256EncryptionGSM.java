@@ -19,7 +19,7 @@ public class AES256EncryptionGSM {
     // 🔐 ENCRYPT
     public static String encrypt(String plainText) throws Exception {
 
-        byte[] keyBytes = Base64.getDecoder().decode(BASE64_KEY);
+        byte[] keyBytes = Base64.getUrlDecoder().decode(BASE64_KEY);
         SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
 
         // Generate random IV
@@ -45,7 +45,7 @@ public class AES256EncryptionGSM {
     public static String decrypt(String encryptedBase64) throws Exception {
 
         byte[] encryptedData = Base64.getDecoder().decode(encryptedBase64);
-        byte[] keyBytes = Base64.getDecoder().decode(BASE64_KEY);
+        byte[] keyBytes = Base64.getUrlDecoder().decode(BASE64_KEY);
 
         // Extract IV
         byte[] iv = new byte[GCM_IV_LENGTH];
