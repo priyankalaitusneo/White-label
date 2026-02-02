@@ -2,6 +2,7 @@ package com.mippay.service;
 
 
 
+import com.mippay.entity.Client.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -20,11 +21,6 @@ import com.mippay.dto.Client.PayoutDto;
 import com.mippay.dto.Client.PayoutFilterByCLientId;
 import com.mippay.dto.Client.PrefundDto;
 import com.mippay.dto.Client.SupportTicketRequestDTO;
-
-import com.mippay.entity.Client.Client;
-import com.mippay.entity.Client.IpAddress;
-import com.mippay.entity.Client.LienAmount;
-import com.mippay.entity.Client.WebhookUrl;
 
 import com.mippay.response.LocalCheckStatusResponse;
 
@@ -174,4 +170,5 @@ public interface ClientService {
 
 	String handlePhonePeWebhook(Map<String, Object> request);
 
+    ResponseEntity<?> buckBoxPayin(PayinRecords data) throws Exception;
 }

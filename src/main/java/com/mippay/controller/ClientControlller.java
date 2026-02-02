@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
 import com.mippay.entity.Client.Client;
+import com.mippay.entity.Client.PayinRecords;
 import com.mippay.entity.Client.WebhookUrl;
 
 import com.mippay.helper.Generator;
@@ -671,5 +672,12 @@ System.out.println(expectedAuthHeader+"ghjkjhgf");
         System.out.println("generate Token");
         String token = Generator.generateBuckBoxToken();
         return token;
+    }
+
+    @PostMapping("buckbox-payin")
+    public ResponseEntity<?> buckboxPayin (@RequestBody PayinRecords data){
+        System.out.println("generate Token");
+        ResponseEntity<?> response = this.clientService.buckBoxPayin(data);
+        return response;
     }
 }
