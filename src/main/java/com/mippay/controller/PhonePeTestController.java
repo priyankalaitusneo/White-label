@@ -101,6 +101,8 @@ public class PhonePeTestController {
     ) {
 
         logger.info("PhonePe Webhook received: {}", request);
+        
+        System.out.println(request+"-------------"+authorizationHeader);
 
         // Authentication check (explained below)
         if (!phonePeAuthService.verifyAuthorization(authorizationHeader)) {
