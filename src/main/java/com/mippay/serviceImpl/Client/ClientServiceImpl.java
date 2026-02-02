@@ -3746,7 +3746,100 @@ public class ClientServiceImpl implements ClientService {
     }
 
     
-   
+    @Override
+    public String handlePhonePeWebhook(Map<String, Object> request) {
+
+        System.out.println("PhonePe webhook payload: " + request);
+
+        String event = (String) request.get("event");
+        Map<String, Object> payload =
+                (Map<String, Object>) request.get("payload");
+
+        if (payload == null) {
+            return "SUCCESS";
+        }
+
+        String orderId = payload.get("merchantOrderId").toString();
+        String state = payload.get("state").toString();
+
+        String utr = null;
+        if (payload.containsKey("paymentDetails")) {
+            List<Map<String, Object>> paymentDetails =
+                    (List<Map<String, Object>>) payload.get("paymentDetails");
+
+            if (!paymentDetails.isEmpty()) {
+                Map<String, Object> payment = paymentDetails.get(0);
+                if (payment.containsKey("transactionId")) {
+                    utr = payment.get("transactionId").toString();
+                }
+            }
+        }
+
+        // Map PhonePe -> internal
+        String status;
+        String statusCode;
+
+        if ("COMPLETED".equalsIgnoreCase(state)) {
+            status = "SUCCESS";
+            statusCode = "TXNS";
+        } else if ("FAILED".equalsIgnoreCase(state)) {
+            status = "FAILED";
+            statusCode = "TXNF";
+        } else {
+            status = "PENDING";
+            statusCode = "TXNP";
+        }
+
+        Optional<PayinRecords> payin =
+                Optional.ofNullable(payinRepository.findByOrderId(orderId));
+
+        if (payin.isPresent()) {
+
+            // Idempotency: do not re-update SUCCESS
+            if (!"SUCCESS".equals(payin.get().getStatus())) {
+
+                payinRepository.updateStatusByOrderId(
+                        status,
+                        statusCode,
+                        utr,
+                        orderId
+                );
+            }
+
+            // Notify YOUR merchant (same as reference)
+            WebhookUrl web =
+                    webhookRepository.findByUserIdAndType(
+                            payin.get().getUserId(), "PAYIN");
+
+            if (web != null) {
+
+                Map<String, Object> clientCallback = new HashMap<>();
+                clientCallback.put("orderId", orderId);
+                clientCallback.put("utr", utr);
+                clientCallback.put("amount", payin.get().getAmount());
+                clientCallback.put("status", status);
+                clientCallback.put("statusCode", statusCode);
+                clientCallback.put("refundStatus", "");
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                HttpEntity<?> entity =
+                        new HttpEntity<>(clientCallback, headers);
+
+                new RestTemplate().exchange(
+                        web.getUrl(),
+                        HttpMethod.POST,
+                        entity,
+                        String.class
+                );
+            }
+        }
+
+        // ALWAYS acknowledge PhonePe
+        return "SUCCESS";
+    }
+
 
 
 	

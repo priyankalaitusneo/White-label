@@ -172,4 +172,6 @@ public interface ClientService {
 
 	String savePhonePeCallBack(Map<String, Object> request);
 
+	String handlePhonePeWebhook(Map<String, Object> request);
+
 }

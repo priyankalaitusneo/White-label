@@ -81,27 +81,36 @@ public class PhonePeTestController {
                 request
         );
     }
+//    
+//    @GetMapping("/callback")
+//    public ResponseEntity<String> phonePeCallback(
+//            @RequestParam String orderId) {
+//
+//        System.out.println("PHONEPE CALLBACK RECEIVED");
+//        System.out.println("OrderId = " + orderId);
+//
+//        return ResponseEntity.ok(
+//                "Payment received successfully for orderId=" + orderId
+//        );
+//    }
     
-    @GetMapping("/callback")
-    public ResponseEntity<String> phonePeCallback(
-            @RequestParam String orderId) {
+    @PostMapping("/phonepe-callback")
+    public String phonePeCallback(
+            @RequestBody Map<String, Object> request,
+            @RequestHeader("Authorization") String authorizationHeader
+    ) {
 
-        System.out.println("PHONEPE CALLBACK RECEIVED");
-        System.out.println("OrderId = " + orderId);
+        logger.info("PhonePe Webhook received: {}", request);
 
-        return ResponseEntity.ok(
-                "Payment received successfully for orderId=" + orderId
-        );
+        // Authentication check (explained below)
+        if (!phonePeAuthService.verifyAuthorization(authorizationHeader)) {
+            logger.warn("Invalid PhonePe webhook authorization");
+            return "UNAUTHORIZED";
+        }
+
+        return clientService.handlePhonePeWebhook(request);
     }
     
-    @PostMapping("/callback")
-    public String phonePeCallBack(@RequestBody Map<String, Object> request) {
-        logger.info("POST /phonepe/callback → Callback request received: {}", request);
-
-        String response = clientService.savePhonePeCallBack(request);
-
-        logger.info("POST /phonepe/callback → Callback service response: {}", response);
-        return response;
-    }
+    
 
 }
