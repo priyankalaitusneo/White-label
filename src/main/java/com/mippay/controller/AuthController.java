@@ -14,6 +14,7 @@ import com.mippay.repository.Client.ClientRepository;
 import com.mippay.service.AdminRoleService;
 import com.mippay.service.AdminService;
 import com.mippay.service.ClientService;
+import com.mippay.service.PhonePeAuthService;
 import com.mippay.service.RoleService;
 
 import com.mippay.util.JWTHelper;
@@ -63,6 +64,11 @@ public class AuthController {
     UserRepository adminRepository;
     @Autowired
     ClientRepository clientRepository;
+    
+    
+    @Autowired
+    private PhonePeAuthService phonePeAuthService;
+
 
     /////////////// API to create new admin ///////////////
     @PostMapping("/create_admin")
@@ -326,5 +332,22 @@ public class AuthController {
         return ResponseEntity.ok("Logged out successfully");
     }
 
+    @PostMapping("/phonepe-callback")
+  public String phonePeCallback(
+          @RequestBody Map<String, Object> request,
+          @RequestHeader("Authorization") String authorizationHeader
+  ) {
 
+      logger.info("PhonePe Webhook received: {}", request);
+      
+      System.out.println(request+"-------------"+authorizationHeader);
+
+      // Authentication check (explained below)
+      if (!phonePeAuthService.verifyAuthorization(authorizationHeader)) {
+          logger.warn("Invalid PhonePe webhook authorization");
+          return "UNAUTHORIZED";
+      }
+
+      return clientService.handlePhonePeWebhook(request);
+  }
 }

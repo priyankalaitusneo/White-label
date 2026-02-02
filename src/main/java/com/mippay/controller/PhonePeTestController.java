@@ -94,24 +94,24 @@ public class PhonePeTestController {
 //        );
 //    }
     
-    @PostMapping("/phonepe-callback")
-    public String phonePeCallback(
-            @RequestBody Map<String, Object> request,
-            @RequestHeader("Authorization") String authorizationHeader
-    ) {
-
-        logger.info("PhonePe Webhook received: {}", request);
-        
-        System.out.println(request+"-------------"+authorizationHeader);
-
-        // Authentication check (explained below)
-        if (!phonePeAuthService.verifyAuthorization(authorizationHeader)) {
-            logger.warn("Invalid PhonePe webhook authorization");
-            return "UNAUTHORIZED";
-        }
-
-        return clientService.handlePhonePeWebhook(request);
-    }
+//    @PostMapping("/phonepe-callback")
+//    public String phonePeCallback(
+//            @RequestBody Map<String, Object> request,
+//            @RequestHeader("Authorization") String authorizationHeader
+//    ) {
+//
+//        logger.info("PhonePe Webhook received: {}", request);
+//        
+//        System.out.println(request+"-------------"+authorizationHeader);
+//
+//        // Authentication check (explained below)
+//        if (!phonePeAuthService.verifyAuthorization(authorizationHeader)) {
+//            logger.warn("Invalid PhonePe webhook authorization");
+//            return "UNAUTHORIZED";
+//        }
+//
+//        return clientService.handlePhonePeWebhook(request);
+//    }
     
     
 
