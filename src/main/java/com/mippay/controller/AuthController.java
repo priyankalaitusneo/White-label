@@ -42,7 +42,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/payment/auth")
-//@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*")
 public class AuthController {
     Logger logger = LoggerFactory.getLogger(AuthController.class);
 
