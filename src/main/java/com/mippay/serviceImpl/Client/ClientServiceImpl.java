@@ -3862,7 +3862,7 @@ public class ClientServiceImpl implements ClientService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Api-Key", "3fAEwQ3mcsuuDOISIoUWNoSwJzh8a8Odiwv47z5FKITmxgYhAWor");
-        headers.set("Authorization", Generator.generateBuckBoxToken());
+        headers.set("Authorization", "Bearer "+t  Generator.generateBuckBoxToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         String encRequest = AES256EncryptionGSM.encrypt(request.toString());
