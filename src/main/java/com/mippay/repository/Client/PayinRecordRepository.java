@@ -9,6 +9,8 @@ import org.springframework.stereotype.Repository;
 
 import com.mippay.entity.Client.PayinRecords;
 
+import jakarta.transaction.Transactional;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -318,5 +320,11 @@ public interface PayinRecordRepository extends JpaRepository<PayinRecords, Integ
 		    nativeQuery = true
 		)
 	Page<PayinRecords> findByClientIdWithPagination(String clientId, Pageable pageable);
+	
+	
+	  @Transactional
+	    @Modifying
+	    @Query(value = "update payin_records set status =:success, status_code =:txns, utr =:utr where order_id =:orderId", nativeQuery = true)
+	    void updateStatusByOrderId(String success, String txns,String utr, String orderId);
 
 }

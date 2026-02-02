@@ -37,6 +37,9 @@ public interface WebhookRepository extends JpaRepository<WebhookUrl, Integer> {
             @Param("webhooktype") String webhooktype
     );
 
+    
+    @Query(value = "select * from webhook_url where user_id =:client and webhooktype =:payin", nativeQuery = true)
+    WebhookUrl findByUserIdAndType(String client, String payin);
 
 
 

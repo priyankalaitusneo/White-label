@@ -3615,8 +3615,231 @@ public class ClientServiceImpl implements ClientService {
 
         payinRepository.save(r);
     }
+
+    @Override
+    public String savePhonePeCallBack(Map<String, Object> request) {
+
+        System.out.println("PhonePe CallBack: " + request);
+
+        /* =========================
+           EXTRACT PAYLOAD
+        ========================= */
+        Map<String, Object> payload =
+                (Map<String, Object>) request.get("payload");
+
+        if (payload == null) {
+            logger.warn("Invalid PhonePe callback: payload missing");
+            return "SUCCESS"; // Always ack
+        }
+
+        String orderId = payload.get("merchantOrderId").toString();
+        String state   = payload.get("state").toString();
+
+        System.out.println("OrderId: " + orderId);
+        System.out.println("State: " + state);
+
+        /* =========================
+           PAYMENT DETAILS
+        ========================= */
+        String utr = null;
+
+        if (payload.containsKey("paymentDetails")) {
+            Object detailsObj = payload.get("paymentDetails");
+            if (detailsObj instanceof List) {
+                List<Map<String, Object>> details =
+                        (List<Map<String, Object>>) detailsObj;
+
+                if (!details.isEmpty()) {
+                    Map<String, Object> first = details.get(0);
+                    if (first.containsKey("transactionId")) {
+                        utr = first.get("transactionId").toString();
+                    }
+                }
+            }
+        }
+
+        /* =========================
+           STATUS MAPPING (SAME AS OLD)
+        ========================= */
+        String status;
+        String statusCode;
+
+        if ("COMPLETED".equalsIgnoreCase(state)) {
+            status = "SUCCESS";
+            statusCode = "TXNS";
+        } else if ("FAILED".equalsIgnoreCase(state)) {
+            status = "FAILED";
+            statusCode = "TXNF";
+        } else {
+            status = "PENDING";
+            statusCode = "TXNP";
+        }
+
+        System.out.println("Mapped status=" + status + ", code=" + statusCode);
+
+        /* =========================
+           UPDATE DB
+        ========================= */
+        Optional<PayinRecords> payin =
+                Optional.ofNullable(payinRepository.findByOrderId(orderId));
+
+        if (payin.isPresent()) {
+            if ("SUCCESS".equals(status)) {
+                payinRepository.updateStatusByOrderId(
+                        "SUCCESS",
+                        statusCode,
+                        utr,
+                        orderId
+                );
+            } else if ("FAILED".equals(status)) {
+                payinRepository.updateStatusByOrderId(
+                        "FAILED",
+                        statusCode,
+                        utr,
+                        orderId
+                );
+            }
+        }
+
+        /* =========================
+           SEND CALLBACK TO MERCHANT
+        ========================= */
+        if (payin.isPresent()) {
+
+            String client = payin.get().getUserId();
+            WebhookUrl web =
+                    webhookRepository.findByUserIdAndType(client, "PAYIN");
+
+            if (web != null) {
+                RestTemplate restTemplate = new RestTemplate();
+
+                Map<String, Object> callBackRequest = new HashMap<>();
+                callBackRequest.put("orderId", orderId);
+                callBackRequest.put("utr", utr);
+                callBackRequest.put("paymentMethod", payin.get().getPaymentMethod());
+                callBackRequest.put("amount", payload.get("amount").toString());
+                callBackRequest.put("status", status);
+                callBackRequest.put("statusCode", statusCode);
+                callBackRequest.put("refundStatus", "");
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                HttpEntity<?> entity =
+                        new HttpEntity<>(callBackRequest, headers);
+
+                logger.info("Sending callback to merchant: {}", entity);
+
+                ResponseEntity<String> response =
+                        restTemplate.exchange(
+                                web.getUrl(),
+                                HttpMethod.POST,
+                                entity,
+                                String.class
+                        );
+
+                logger.info("Merchant callback response: {}", response.getBody());
+            }
+        }
+
+        return "SUCCESS";
+    }
+
     
-   
+    @Override
+    public String handlePhonePeWebhook(Map<String, Object> request) {
+
+        System.out.println("PhonePe webhook payload: " + request);
+
+        String event = (String) request.get("event");
+        Map<String, Object> payload =
+                (Map<String, Object>) request.get("payload");
+
+        if (payload == null) {
+            return "SUCCESS";
+        }
+
+        String orderId = payload.get("merchantOrderId").toString();
+        String state = payload.get("state").toString();
+
+        String utr = null;
+        if (payload.containsKey("paymentDetails")) {
+            List<Map<String, Object>> paymentDetails =
+                    (List<Map<String, Object>>) payload.get("paymentDetails");
+
+            if (!paymentDetails.isEmpty()) {
+                Map<String, Object> payment = paymentDetails.get(0);
+                if (payment.containsKey("transactionId")) {
+                    utr = payment.get("transactionId").toString();
+                }
+            }
+        }
+
+        // Map PhonePe -> internal
+        String status;
+        String statusCode;
+
+        if ("COMPLETED".equalsIgnoreCase(state)) {
+            status = "SUCCESS";
+            statusCode = "TXNS";
+        } else if ("FAILED".equalsIgnoreCase(state)) {
+            status = "FAILED";
+            statusCode = "TXNF";
+        } else {
+            status = "PENDING";
+            statusCode = "TXNP";
+        }
+
+        Optional<PayinRecords> payin =
+                Optional.ofNullable(payinRepository.findByOrderId(orderId));
+
+        if (payin.isPresent()) {
+
+            // Idempotency: do not re-update SUCCESS
+            if (!"SUCCESS".equals(payin.get().getStatus())) {
+
+                payinRepository.updateStatusByOrderId(
+                        status,
+                        statusCode,
+                        utr,
+                        orderId
+                );
+            }
+
+            // Notify YOUR merchant (same as reference)
+            WebhookUrl web =
+                    webhookRepository.findByUserIdAndType(
+                            payin.get().getUserId(), "PAYIN");
+
+            if (web != null) {
+
+                Map<String, Object> clientCallback = new HashMap<>();
+                clientCallback.put("orderId", orderId);
+                clientCallback.put("utr", utr);
+                clientCallback.put("amount", payin.get().getAmount());
+                clientCallback.put("status", status);
+                clientCallback.put("statusCode", statusCode);
+                clientCallback.put("refundStatus", "");
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                HttpEntity<?> entity =
+                        new HttpEntity<>(clientCallback, headers);
+
+                new RestTemplate().exchange(
+                        web.getUrl(),
+                        HttpMethod.POST,
+                        entity,
+                        String.class
+                );
+            }
+        }
+
+        // ALWAYS acknowledge PhonePe
+        return "SUCCESS";
+    }
+
 
 
 	

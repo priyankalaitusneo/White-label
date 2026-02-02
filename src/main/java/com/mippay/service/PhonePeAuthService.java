@@ -10,7 +10,10 @@ import org.springframework.web.client.RestTemplate;
 import com.mippay.response.PhonePeOrderStatusResponse;
 import com.mippay.response.PhonePeTokenResponse;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.HexFormat;
 
 @Service
 public class PhonePeAuthService {
@@ -62,4 +65,31 @@ public class PhonePeAuthService {
         return cachedToken.getAccess_token();
     }
 
+    
+    private static final String USERNAME = "olivia19";
+    private static final String PASSWORD = "olivia123";
+
+    public boolean verifyAuthorization(String authHeader) {
+    	
+    	System.out.println(authHeader+"------------");
+
+        if (authHeader == null || !authHeader.startsWith("SHA256")) {
+            return false;
+        }
+
+        String expectedHash = sha256(USERNAME +":"+PASSWORD);
+        String receivedHash = authHeader.replace("SHA256", "").trim();
+System.out.println(receivedHash+"--------------expected"+expectedHash);
+        return expectedHash.equalsIgnoreCase(receivedHash);
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

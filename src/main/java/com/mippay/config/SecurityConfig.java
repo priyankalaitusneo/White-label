@@ -44,7 +44,7 @@ public class SecurityConfig {
                         "/phonepe/token",
                         "/phonepe/order-status/**"
                     ).permitAll()
-                .requestMatchers("/phonepe/webhook").permitAll()
+                .requestMatchers("/phonepe/phonepe-callback").permitAll()
                 .requestMatchers("/payment/admin/**").authenticated()
                 .anyRequest()
                 .authenticated()
