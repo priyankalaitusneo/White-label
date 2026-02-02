@@ -3843,7 +3843,8 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public ResponseEntity<?> buckBoxPayin(PayinRecords data) throws Exception {
-        String url = "https://payin.bustto.com/api/merchant/external/transaction/payin";
+        String url = "POST - https://payin-staging.bustto.com/api/merchant/external/transaction/payin/";
+//        String url = "https://payin.bustto.com/api/merchant/external/transaction/payin";
         RestTemplate restTemplate = new RestTemplate();
 
         Map<String,Object> delivery = new HashMap<>();
