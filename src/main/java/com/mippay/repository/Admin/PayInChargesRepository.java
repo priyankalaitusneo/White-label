@@ -1,5 +1,9 @@
 package com.mippay.repository.Admin;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -68,4 +72,7 @@ public interface PayInChargesRepository extends JpaRepository<PayInCharges, Long
     List<PayInCharges> fetchByUserIdAndRange(String userId,
                                              Double amount,
                                              Double amount1);
+
+    @Query(value = "select * from pay_in_charges where user_id =:userId and ((:fromRange between from_range and to_range) or (:toRange between from_range and to_range))",nativeQuery = true)
+    List<PayInCharges> fetchByClientIdAndRange(@NotBlank(message = "userId is required") String userId, @NotNull(message = "fromRange is required") @PositiveOrZero(message = "fromRange must be >= 0") Long fromRange, @NotNull(message = "toRange is required") @Positive(message = "toRange must be > 0") Long toRange);
 }

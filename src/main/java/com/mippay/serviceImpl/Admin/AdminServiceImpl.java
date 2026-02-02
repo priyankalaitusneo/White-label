@@ -639,17 +639,17 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
-	public ResponseEntity<List<ClientResponseDto>> getAllClients() {
+	public ResponseEntity<?> getAllClients() {
 		logger.info("getAllClients() → Fetching all client records");
 		try {
 			// Fetch all clients from the database
 			List<Client> clients = clientRepository.findAll();
 			logger.info("getAllClients() → {} clients found", clients.size());
-			// Convert Client entities to ClientResponseDto
-			List<ClientResponseDto> clientResponseList = clients.stream().map(this::convertToDto)
-					.collect(Collectors.toList());
-			logger.info("getAllClients() → Returning client response list");
-			return ResponseEntity.ok(clientResponseList);
+//			// Convert Client entities to ClientResponseDto
+//			List<ClientResponseDto> clientResponseList = clients.stream().map(this::convertToDto)
+//					.collect(Collectors.toList());
+//			logger.info("getAllClients() → Returning client response list");
+			return ResponseEntity.ok(clients);
 		} catch (Exception e) {
 			logger.error("getAllClients() → Error fetching all clients: {}", e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -657,90 +657,43 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	// Helper method to convert Client entity to ClientResponseDto
-	private ClientResponseDto convertToDto(Client client) {
-		logger.info("convertToDto() → Converting Client entity to DTO for userId: {}", client.getUserId());
-		ClientResponseDto dto = new ClientResponseDto();
-		dto.setUserId(client.getUserId());
-		dto.setName(client.getName());
-		dto.setEmail(client.getEmail());
-		dto.setMobileNum(client.getMobileNum());
-		dto.setStatus(client.getStatus());
-		dto.setAccountNum(client.getAccountNum());
-		dto.setIfscCode(client.getIfscCode());
-		dto.setGst(client.getGst());
-		dto.setCin(client.getCin());
-		dto.setAccountBal(client.getAccountBal());
-		dto.setMerchantType(client.getMerchantType());
-		dto.setCreatedDate(client.getCreatedDate());
-		dto.setUpdatedDate(client.getUpdatedDate());
-		
-		logger.info("convertToDto() → DTO conversion completed for userId: {}", client.getUserId());
-		return dto;
-	}
+//	private ClientResponseDto convertToDto(Client client) {
+//		logger.info("convertToDto() → Converting Client entity to DTO for userId: {}", client.getUserId());
+//		ClientResponseDto dto = new ClientResponseDto();
+//		dto.setUserId(client.getUserId());
+//		dto.setName(client.getName());
+//		dto.setEmail(client.getEmail());
+//		dto.setMobileNum(client.getMobileNum());
+//		dto.setStatus(client.getStatus());
+//		dto.setAccountNum(client.getAccountNum());
+//		dto.setIfscCode(client.getIfscCode());
+//		dto.setGst(client.getGst());
+//		dto.setCin(client.getCin());
+//		dto.setAccountBal(client.getAccountBal());
+//		dto.setMerchantType(client.getMerchantType());
+//		dto.setCreatedDate(client.getCreatedDate());
+//		dto.setUpdatedDate(client.getUpdatedDate());
+//
+//		logger.info("convertToDto() → DTO conversion completed for userId: {}", client.getUserId());
+//		return dto;
+//	}
 
 	
 	@Override
-	public ResponseEntity<?> addPayInCharges(PayInChargesRequestDto dto) {
-		logger.info("addPayInCharges() → Request received for userId: {}, range: {} - {}, chargesType: {}, charges: {}",
-				dto.getUserId(), dto.getFromRange(), dto.getToRange(), dto.getChargesType(), dto.getChargesAmount());
-
-		try {
-			// Validate input
-			if (dto.getFromRange() > dto.getToRange()) {
-				logger.warn("addPayInCharges() → Validation failed: fromRange {} > toRange {}", 
-						dto.getFromRange(), dto.getToRange());
-				ResponseDto response = ResponseDto.builder()
-						.status("BAD_REQUEST")
-						.message("ERROR")
-						.data("From range must be less than or equal to To range")
-						.build();
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			// Check for overlapping ranges for the same user
-			boolean overlaps = payInChargesRepository.existsOverlap(dto.getUserId(), 
-					dto.getFromRange(), dto.getToRange());
-			if (overlaps) {
-				logger.warn("addPayInCharges() → Overlapping range detected for userId: {}, range: {} - {}",
-						dto.getUserId(), dto.getFromRange(), dto.getToRange());
-				ResponseDto response = ResponseDto.builder()
-						.status("BAD_REQUEST")
-						.message("ERROR")
-						.data("PayIn Charges already exist for given userId with overlapping amount range")
-						.build();
-				return ResponseEntity.badRequest().body(response);
-			}
-
-			// Create new PayInCharges entity
-			PayInCharges payInCharges = new PayInCharges();
-			payInCharges.setUserId(dto.getUserId());
-			payInCharges.setFromRange(dto.getFromRange());
-			payInCharges.setToRange(dto.getToRange());
-			payInCharges.setChargesType(dto.getChargesType());
-			payInCharges.setChargesAmount(dto.getChargesAmount());
-
-			// Save to database
-			PayInCharges savedCharges = payInChargesRepository.save(payInCharges);
-			logger.info("addPayInCharges() → PayInCharges saved successfully with ID: {}", savedCharges.getId());
-
-			PayInChargesResponseDto responseDto = convertToResponseDto(savedCharges);
-			ResponseDto response = ResponseDto.builder()
-					.status("OK")
-					.message("SUCCESS")
-					.data(responseDto)
-					.build();
-
-			return ResponseEntity.status(HttpStatus.CREATED).body(response);
-
-		} catch (Exception e) {
-			logger.error("addPayInCharges() → Exception occurred: {}", e.getMessage(), e);
-			ResponseDto response = ResponseDto.builder()
-					.status("INTERNAL_SERVER_ERROR")
-					.message("ERROR")
-					.data("Failed to add PayIn Charges: " + e.getMessage())
-					.build();
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-		}
+	public ResponseEntity<?> addPayInCharges(PayInCharges dto) {
+        logger.info("setCharges() → Request received to set charges for clientId: {}, range: {} - {}", dto.getUserId(),
+                dto.getFromRange(), dto.getToRange());
+        List<PayInCharges> charges = this.payInChargesRepository.fetchByClientIdAndRange(dto.getUserId(), dto.getFromRange(),
+                dto.getToRange());
+        logger.info("setCharges() → Existing charges found: {}", charges);
+        if (charges.size() > 0) {
+            logger.warn("setCharges() → Duplicate charge range detected for clientId: {}", dto.getUserId());
+            return ResponseEntity.badRequest().body("Charges already set for given clientId with same amount range..!");
+        } else {
+            this.payInChargesRepository.save(dto);
+            logger.info("setCharges() → Charges saved successfully for clientId: {}", dto.getUserId());
+            return ResponseEntity.ok("Charges set successfully..!");
+        }
 	}
 
 	@Override

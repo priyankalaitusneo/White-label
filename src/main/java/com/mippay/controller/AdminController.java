@@ -20,6 +20,7 @@ import com.mippay.dto.Client.PayoutFilterByCLientId;
 import com.mippay.dto.Client.PrefundDto;
 
 import com.mippay.entity.Admin.Charges;
+import com.mippay.entity.Admin.PayInCharges;
 import com.mippay.entity.Admin.Role;
 
 import com.mippay.entity.Client.Client;
@@ -190,7 +191,7 @@ public class AdminController {
 	}
 
 	@GetMapping("/clients")
-	public ResponseEntity<List<ClientResponseDto>> getAllClients() {
+	public ResponseEntity<?> getAllClients() {
 		logger.info("GET /clients");
 		return adminService.getAllClients();
 	}
@@ -464,7 +465,7 @@ public class AdminController {
 	//  PAYIN CHARGES 
 
 		@PostMapping("/payinCharges")
-		public ResponseEntity<?> addPayInCharges(@Valid @RequestBody PayInChargesRequestDto dto) {
+		public ResponseEntity<?> addPayInCharges(@Valid @RequestBody PayInCharges dto) {
 			logger.info("POST /payinCharges → Request: {}", dto);
 			ResponseEntity<?> response = adminService.addPayInCharges(dto);
 			logger.info("POST /payinCharges → Response Status: {}", response.getStatusCode());
