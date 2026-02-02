@@ -9,6 +9,7 @@ import java.security.MessageDigest;
 import com.mippay.entity.Client.Client;
 import com.mippay.entity.Client.WebhookUrl;
 
+import com.mippay.helper.Generator;
 import com.mippay.repository.Admin.UserRepository;
 import com.mippay.repository.Client.ClientRepository;
 
@@ -665,4 +666,10 @@ System.out.println(expectedAuthHeader+"ghjkjhgf");
 	}
  
 
+    @GetMapping("token")
+    public String generateToken (){
+        System.out.println("generate Token");
+        String token = Generator.generateBuckBoxToken();
+        return token;
+    }
 }
