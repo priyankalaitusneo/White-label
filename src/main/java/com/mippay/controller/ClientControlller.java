@@ -675,7 +675,7 @@ System.out.println(expectedAuthHeader+"ghjkjhgf");
     }
 
     @PostMapping("buckbox-payin")
-    public ResponseEntity<?> buckboxPayin (@RequestBody PayinRecords data){
+    public ResponseEntity<?> buckboxPayin (@RequestBody PayinRecords data) throws Exception {
         System.out.println("generate Token");
         ResponseEntity<?> response = this.clientService.buckBoxPayin(data);
         return response;
