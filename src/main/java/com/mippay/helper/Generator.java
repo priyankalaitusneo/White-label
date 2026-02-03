@@ -60,14 +60,15 @@ public class Generator {
     }
 
     public static String generateBuckBoxToken(){
-        String secretKey = "vqBCBlPbo4RaEmn7ClQGkUuBoUViyhBAB2GHtCDpmJ6PCdOnMGX4";
+//        String secretKey = "vqBCBlPbo4RaEmn7ClQGkUuBoUViyhBAB2GHtCDpmJ6PCdOnMGX4";
+        String secretKey = "13lrmA8Axm6vwnv1324js6ORrM3ASG3odji07TFumW51gaND2yhm";
         Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + 7L * 24 * 60 * 60 * 1000); // 7 days
 
         String token = Jwts.builder()
-                .claim("merchant_id", "BM9230")
+                .claim("merchant_id", "BM705445")
                 .claim("name", "KN ANGNAIKHAM")
                 .claim("email", "meihitech@gmail.com")
                 .setExpiration(expiryDate)

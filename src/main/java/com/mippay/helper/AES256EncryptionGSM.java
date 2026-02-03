@@ -14,7 +14,8 @@ public class AES256EncryptionGSM {
     private static final int GCM_IV_LENGTH = 12;   // bytes (recommended)
 
     // Your Base64 key
-    private static final String BASE64_KEY = "iif-dygvrzH-yzieNt14vXX93M1telw2U2nlbGv1Nng=";
+    private static final String BASE64_KEY = "cRxMwjXEVDV0jgKLuTG4ePQRZG8YDReU7K7f1b3T9Zk=";
+//    private static final String BASE64_KEY = "iif-dygvrzH-yzieNt14vXX93M1telw2U2nlbGv1Nng=";
 
     // 🔐 ENCRYPT
     public static String encrypt(String plainText) throws Exception {
