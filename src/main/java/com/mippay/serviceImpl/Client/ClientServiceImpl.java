@@ -1818,7 +1818,7 @@ public class ClientServiceImpl implements ClientService {
 
 	    logger.info("PayIn request initiated | userId={} | orderId={}",
 	            data.getUserId(), data.getOrderId());
-	    System.out.println("▶ PayIn START | userId=" + data.getUserId()
+	    System.out.println("PayIn START | userId=" + data.getUserId()
 	            + " | orderId=" + data.getOrderId());
 
 	    try {
@@ -1829,7 +1829,7 @@ public class ClientServiceImpl implements ClientService {
 	        if (!isAuthenticated(clientId, clientSecretId, data.getUserId())) {
 	            logger.warn("Authentication failed | userId={} | clientId={}",
 	                    data.getUserId(), clientId);
-	            System.out.println("❌ AUTH FAILED");
+	            System.out.println("AUTH FAILED");
 
 	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 	                    .body(ResponseDto.builder()
@@ -1840,7 +1840,7 @@ public class ClientServiceImpl implements ClientService {
 	        }
 
 	        logger.info("Authentication successful | userId={}", data.getUserId());
-	        System.out.println("✅ AUTH OK");
+	        System.out.println("AUTH OK");
 
 	        // ================= CLIENT =================
 	        logger.debug("Fetching client | userId={}", data.getUserId());
@@ -1848,7 +1848,7 @@ public class ClientServiceImpl implements ClientService {
 
 	        if (client.isEmpty()) {
 	            logger.error("Client not found | userId={}", data.getUserId());
-	            System.out.println("❌ CLIENT NOT FOUND");
+	            System.out.println("CLIENT NOT FOUND");
 
 	            return ResponseEntity.badRequest()
 	                    .body(ResponseDto.builder()
@@ -1859,7 +1859,7 @@ public class ClientServiceImpl implements ClientService {
 	        }
 
 	        logger.info("Client found | userId={}", data.getUserId());
-	        System.out.println("✅ CLIENT OK");
+	        System.out.println("CLIENT OK");
 
 	        // ================= IP =================
 	        String ip = ipFetching.getClientIP(req);
@@ -1873,7 +1873,7 @@ public class ClientServiceImpl implements ClientService {
 	                    data.getUserId(),
 	                    ip,
 	                    ipEntity.isPresent() ? ipEntity.get().getIpAddress() : "NONE");
-	            System.out.println("❌ IP NOT WHITELISTED");
+	            System.out.println("IP NOT WHITELISTED");
 
 	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 	                    .body(ResponseDto.builder()
@@ -1884,14 +1884,14 @@ public class ClientServiceImpl implements ClientService {
 	        }
 
 	        logger.info("IP whitelisted | userId={} | ip={}", data.getUserId(), ip);
-	        System.out.println("✅ IP OK");
+	        System.out.println("IP OK");
 
 	        // ================= ORDER =================
 	        logger.debug("Validating orderId={}", data.getOrderId());
 
 	        if (data.getOrderId() == null || data.getOrderId().isBlank()) {
 	            logger.error("OrderId missing | userId={}", data.getUserId());
-	            System.out.println("❌ ORDER ID MISSING");
+	            System.out.println("ORDER ID MISSING");
 
 	            return ResponseEntity.badRequest()
 	                    .body(ResponseDto.builder()
@@ -1903,7 +1903,7 @@ public class ClientServiceImpl implements ClientService {
 
 	        if (payinRepository.findByOrderId(data.getOrderId()) != null) {
 	            logger.warn("Duplicate OrderId | orderId={}", data.getOrderId());
-	            System.out.println("❌ DUPLICATE ORDER ID");
+	            System.out.println("DUPLICATE ORDER ID");
 
 	            return ResponseEntity.badRequest()
 	                    .body(ResponseDto.builder()
@@ -1914,7 +1914,7 @@ public class ClientServiceImpl implements ClientService {
 	        }
 
 	        logger.info("OrderId validation passed | orderId={}", data.getOrderId());
-	        System.out.println("✅ ORDER ID OK");
+	        System.out.println("ORDER ID OK");
 
 	        // ================= CHARGES =================
 	        logger.debug("Calculating charges | orderId={} | amount={}",
@@ -1925,7 +1925,7 @@ public class ClientServiceImpl implements ClientService {
 	        if (!Boolean.TRUE.equals(calc.get("configured"))) {
 	            logger.error("Charge calculation failed | orderId={} | error={}",
 	                    data.getOrderId(), calc.get("error"));
-	            System.out.println("❌ CHARGE CALC FAILED");
+	            System.out.println("CHARGE CALC FAILED");
 
 	            return ResponseEntity.badRequest()
 	                    .body(ResponseDto.builder()
@@ -1940,12 +1940,12 @@ public class ClientServiceImpl implements ClientService {
 	                calc.get("charges"),
 	                calc.get("gstCharges"),
 	                calc.get("netAmount"));
-	        System.out.println("✅ CHARGES OK");
+	        System.out.println("CHARGES OK");
 
 	        // ================= PHONEPE =================
 	        logger.info("Calling PhonePe | orderId={} | amount={}",
 	                data.getOrderId(), data.getAmount());
-	        System.out.println("▶ CALLING PHONEPE");
+	        System.out.println("CALLING PHONEPE");
 
 	        ResponseEntity<String> phonePeResponse;
 	        try {
@@ -1956,7 +1956,7 @@ public class ClientServiceImpl implements ClientService {
 	                    phonePeResponse.getBody());
 	        } catch (Exception e) {
 	            logger.error("PhonePe API error | orderId={}", data.getOrderId(), e);
-	            System.out.println("❌ PHONEPE ERROR");
+	            System.out.println("PHONEPE ERROR");
 
 	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 	                    .body(ResponseDto.builder()
@@ -2006,11 +2006,10 @@ public class ClientServiceImpl implements ClientService {
 	        payinRepository.save(r);
 
 	        logger.info("PayIn saved successfully | orderId={}", data.getOrderId());
-	        System.out.println("✅ PAYIN SAVED");
+	        System.out.println("PAYIN SAVED");
 
-	        // ================= FINAL RESPONSE =================
 	        logger.info("Returning success response | orderId={}", data.getOrderId());
-	        System.out.println("▶ RETURNING SUCCESS RESPONSE");
+	        System.out.println("RETURNING SUCCESS RESPONSE");
 
 	        return ResponseEntity.ok(
 	                buildSuccessResponse(r, redirectUrl)
@@ -2019,7 +2018,7 @@ public class ClientServiceImpl implements ClientService {
 	    } catch (Exception e) {
 	        logger.error("Unexpected error in paymentPayin | orderId={}",
 	                data.getOrderId(), e);
-	        System.out.println("🔥 UNEXPECTED ERROR");
+	        System.out.println("UNEXPECTED ERROR");
 
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 	                .body(ResponseDto.builder()
@@ -2052,8 +2051,6 @@ public class ClientServiceImpl implements ClientService {
         response.put("redirect_url", redirectUrl);
         response.put("status", record.getStatus());
         response.put("statusCode", record.getStatusCode());
-
-        // ✅ CRITICAL FIX
         response.put("createdDate",
                 record.getCreatedDate() != null
                         ? record.getCreatedDate().toString()
@@ -2072,17 +2069,14 @@ public class ClientServiceImpl implements ClientService {
     }
 
 
-    // CHARGES CALCULATION - ENHANCED WITH LOGGING
+    // CHARGES CALCULATION
     private Map<String, Object> payinChargesCalculations(PayinDto data) {
-        logger.debug("Starting charge calculation for userId: {} | Amount: {}", 
-                data.getUserId(), data.getAmount());
 
         Map<String, Object> map = new HashMap<>();
 
         BigDecimal amount = safeBig(data.getAmount());
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            logger.error("Invalid amount provided: {} for userId: {}", amount, data.getUserId());
             map.put("configured", false);
             map.put("error", "Invalid amount");
             return map;
@@ -2092,55 +2086,44 @@ public class ClientServiceImpl implements ClientService {
                 .findApplicableCharges(data.getUserId(), amount.doubleValue());
 
         if (ch == null) {
-            logger.error("Charges not configured for userId: {} | Amount: {}", 
-                    data.getUserId(), amount.doubleValue());
             map.put("configured", false);
             map.put("error", "Charges not configured");
             return map;
         }
 
-        logger.debug("Charge configuration found | Type: {} | ChargeAmount: {}", 
-                ch.getChargesType(), ch.getChargesAmount());
-
         BigDecimal charges;
-        BigDecimal chargesAmount = BigDecimal.valueOf(ch.getChargesAmount());
+        BigDecimal chargeValue = BigDecimal.valueOf(ch.getChargesAmount());
+        if ("PERCENTAGE".equalsIgnoreCase(ch.getChargesType())
+                || "%".equals(ch.getChargesType())) {
 
-        if ("PERCENTAGE".equalsIgnoreCase(ch.getChargesType())) {
-            charges = amount.multiply(chargesAmount)
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            logger.debug("Percentage charges calculated: {}% of {} = {}", 
-                    chargesAmount, amount, charges);
+            charges = amount
+                    .multiply(chargeValue)
+                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
         } else {
-            charges = chargesAmount;
-            logger.debug("Fixed charges applied: {}", charges);
+            charges = chargeValue;
         }
 
-        BigDecimal gst = charges.multiply(BigDecimal.valueOf(18))
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal gst = charges
+                .multiply(BigDecimal.valueOf(18))
+                .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
         BigDecimal netAmount = amount.subtract(charges.add(gst));
 
-        logger.debug("Charge breakdown | Amount: {} | Charges: {} | GST: {} | Net: {}", 
-                amount, charges, gst, netAmount);
-
         if (netAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            logger.error("Net amount is invalid (<=0) after deductions for userId: {}", data.getUserId());
             map.put("configured", false);
             map.put("error", "Net amount invalid");
             return map;
         }
 
         map.put("configured", true);
-        map.put("amount", amount);
-        map.put("charges", charges);
-        map.put("gstCharges", gst);
-        map.put("netAmount", netAmount);
-
-        logger.info("Charge calculation successful for userId: {} | Net Amount: {}", 
-                data.getUserId(), netAmount);
-
+        map.put("amount", amount.setScale(2, RoundingMode.HALF_UP));
+        map.put("charges", charges.setScale(2, RoundingMode.HALF_UP));
+        map.put("gstCharges", gst.setScale(2, RoundingMode.HALF_UP));
+        map.put("netAmount", netAmount.setScale(2, RoundingMode.HALF_UP));
         return map;
     }
+
 //	    // CHARGES CALCULATION
 //	 private Map<String, Object> payinChargesCalculations(PayinDto data) {
 //
