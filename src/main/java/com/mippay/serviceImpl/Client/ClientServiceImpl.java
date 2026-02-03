@@ -13,6 +13,7 @@ import com.mippay.entity.Admin.PayInCharges;
 import com.mippay.entity.Admin.User;
 import com.mippay.entity.Client.*;
 
+import com.mippay.helper.AES256EncryptionGSM;
 import com.mippay.helper.AESEncryptor;
 import com.mippay.helper.Generator;
 import com.mippay.helper.IpFetching;
@@ -3823,7 +3824,40 @@ public class ClientServiceImpl implements ClientService {
         return "SUCCESS";
     }
 
+    @Override
+    public ResponseEntity<?> buckBoxPayin(PayinRecords data) throws Exception {
+        String url = "https://payin-staging.bustto.com/api/merchant/external/transaction/payin/";
+//        String url = "https://payin.bustto.com/api/merchant/external/transaction/payin";
+        RestTemplate restTemplate = new RestTemplate();
+
+        Map<String,Object> delivery = new HashMap<>();
+        delivery.put("ecipient_name", data.getName());
+        delivery.put("ecipient_email",data.getEmail() );
+        delivery.put("recipient_phone_number", data.getNumber());
+        delivery.put("user_id", data.getOrderId());
+
+        Map<String,Object> request = new HashMap<>();
+        request.put("amount", data.getAmount());
+        request.put("external_order_id",data.getOrderId() );
+        request.put("success_url", "");
+        request.put("failure_url", "");
+        request.put("delivery_details", delivery);
+        request.put("payment_mode", data.getTransferMode());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Api-Key", "3fAEwQ3mcsuuDOISIoUWNoSwJzh8a8Odiwv47z5FKITmxgYhAWor");
+        headers.set("Authorization", "Bearer "+ Generator.generateBuckBoxToken());
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        String encRequest = AES256EncryptionGSM.encrypt(request.toString());
+        System.out.println("encRequest: "+encRequest);
+
+        HttpEntity<?> entity = new HttpEntity<>(encRequest, headers);
+        System.out.println("entity: "+entity);
+
+        ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        return ResponseEntity.ok(response.getBody());
+    }
 
 
-	
 }

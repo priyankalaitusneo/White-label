@@ -1,6 +1,11 @@
 package com.mippay.helper;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
@@ -52,5 +57,26 @@ public class Generator {
     public String generateClientId() {
         String date = String.valueOf(new Date().getTime());
         return "PAYCL"+date+this.generateRandomString(4);
+    }
+
+    public static String generateBuckBoxToken(){
+        String secretKey = "vqBCBlPbo4RaEmn7ClQGkUuBoUViyhBAB2GHtCDpmJ6PCdOnMGX4";
+        Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + 7L * 24 * 60 * 60 * 1000); // 7 days
+
+        String token = Jwts.builder()
+                .claim("merchant_id", "BM9230")
+                .claim("name", "KN ANGNAIKHAM")
+                .claim("email", "meihitech@gmail.com")
+                .setExpiration(expiryDate)
+                .setIssuedAt(now)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+
+        System.out.println(token);
+
+        return token;
     }
 }
