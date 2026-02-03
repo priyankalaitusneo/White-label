@@ -3844,6 +3844,8 @@ public class ClientServiceImpl implements ClientService {
         request.put("delivery_details", delivery);
         request.put("payment_mode", data.getTransferMode());
 
+        System.out.println("request: "+ request);
+
         HttpHeaders headers = new HttpHeaders();
         headers.set("Api-Key", "3B5qKMWGFXYGlKfvXP1baZNrIc2VJDNk4WBcGS300QqvbuCAOxPl");
         headers.set("Authorization", "Bearer "+ Generator.generateBuckBoxToken());
