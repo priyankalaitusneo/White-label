@@ -6,6 +6,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Map;
 
 public class AES256EncryptionGSM {
 
@@ -18,9 +19,9 @@ public class AES256EncryptionGSM {
 //    private static final String BASE64_KEY = "iif-dygvrzH-yzieNt14vXX93M1telw2U2nlbGv1Nng=";
 
     // 🔐 ENCRYPT
-    public static String encrypt(String plainText) throws Exception {
+    public static String encrypt(String data) throws Exception {
 
-        byte[] keyBytes = Base64.getUrlDecoder().decode(BASE64_KEY);
+        byte[] keyBytes = BASE64_KEY.getBytes(StandardCharsets.UTF_8);
         SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
 
         // Generate random IV
@@ -32,7 +33,7 @@ public class AES256EncryptionGSM {
         GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec);
 
-        byte[] cipherText = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+        byte[] cipherText = cipher.doFinal(data.getBytes(StandardCharsets.UTF_8));
 
         // Combine IV + cipherText
         byte[] encryptedData = new byte[iv.length + cipherText.length];
