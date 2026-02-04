@@ -1,6 +1,10 @@
 package com.mippay.helper;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -10,60 +14,61 @@ import java.util.Map;
 
 public class AES256EncryptionGSM {
 
-    private static final String AES_GCM_NO_PADDING = "AES/GCM/NoPadding";
-    private static final int GCM_TAG_LENGTH = 128; // bits
-    private static final int GCM_IV_LENGTH = 12;   // bytes (recommended)
+    private static final int NONCE_LENGTH = 16; // 16 bytes nonce
+    private static final int TAG_LENGTH_BIT = 128; // 16 bytes auth tag
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Your Base64 key
-    private static final String BASE64_KEY = "cRxMwjXEVDV0jgKLuTG4ePQRZG8YDReU7K7f1b3T9Zk=";
-//    private static final String BASE64_KEY = "iif-dygvrzH-yzieNt14vXX93M1telw2U2nlbGv1Nng=";
+    public static String encryptPayload(Map<String, Object> data) throws Exception {
 
-    // 🔐 ENCRYPT
-    public static String encrypt(String data) throws Exception {
+        byte[] aesKey = Base64.getUrlDecoder().decode("cRxMwjXEVDV0jgKLuTG4ePQRZG8YDReU7K7f1b3T9Zk=");
 
-        byte[] keyBytes = BASE64_KEY.getBytes(StandardCharsets.UTF_8);
-        SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
-
-        // Generate random IV
-        byte[] iv = new byte[GCM_IV_LENGTH];
-        SecureRandom random = new SecureRandom();
-        random.nextBytes(iv);
-
-        Cipher cipher = Cipher.getInstance(AES_GCM_NO_PADDING);
-        GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec);
-
-        byte[] cipherText = cipher.doFinal(data.getBytes(StandardCharsets.UTF_8));
-
-        // Combine IV + cipherText
-        byte[] encryptedData = new byte[iv.length + cipherText.length];
-        System.arraycopy(iv, 0, encryptedData, 0, iv.length);
-        System.arraycopy(cipherText, 0, encryptedData, iv.length, cipherText.length);
-
-        return Base64.getEncoder().encodeToString(encryptedData);
+        byte[] jsonBytes = objectMapper.writeValueAsString(data)
+                .getBytes(StandardCharsets.UTF_8);
+        byte[] nonce = new byte[NONCE_LENGTH];
+        SecureRandom.getInstanceStrong().nextBytes(nonce);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        SecretKey key = new SecretKeySpec(aesKey, "AES");
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_LENGTH_BIT, nonce);
+        cipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec);
+        byte[] cipherTextWithTag = cipher.doFinal(jsonBytes);
+        // Java output = ciphertext + tag
+        int cipherTextLength = cipherTextWithTag.length - 16;
+        byte[] ciphertext = new byte[cipherTextLength];
+        byte[] tag = new byte[16];
+        System.arraycopy(cipherTextWithTag, 0, ciphertext, 0, cipherTextLength);
+        System.arraycopy(cipherTextWithTag, cipherTextLength, tag, 0, 16);
+        // Python-compatible format: nonce + tag + ciphertext
+        byte[] encryptedBlob = new byte[nonce.length + tag.length + ciphertext.length];
+        System.arraycopy(nonce, 0, encryptedBlob, 0, nonce.length);
+        System.arraycopy(tag, 0, encryptedBlob, nonce.length, tag.length);
+        System.arraycopy(ciphertext, 0, encryptedBlob, nonce.length + tag.length, ciphertext.length);
+        return Base64.getEncoder().encodeToString(encryptedBlob);
     }
+    /**
+     * Decrypt Base64 AES-GCM payload back to Map
+     */
+    public static Map<String, Object> decryptPayload(String encryptedB64) throws Exception {
 
-    // 🔓 DECRYPT
-    public static String decrypt(String encryptedBase64) throws Exception {
-
-        byte[] encryptedData = Base64.getDecoder().decode(encryptedBase64);
-        byte[] keyBytes = Base64.getUrlDecoder().decode(BASE64_KEY);
-
-        // Extract IV
-        byte[] iv = new byte[GCM_IV_LENGTH];
-        System.arraycopy(encryptedData, 0, iv, 0, iv.length);
-
-        // Extract CipherText + AuthTag
-        byte[] cipherText = new byte[encryptedData.length - iv.length];
-        System.arraycopy(encryptedData, iv.length, cipherText, 0, cipherText.length);
-
-        Cipher cipher = Cipher.getInstance(AES_GCM_NO_PADDING);
-        SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
-        GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-
-        cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec);
-
-        byte[] plainText = cipher.doFinal(cipherText);
-        return new String(plainText, StandardCharsets.UTF_8);
+        byte[] aesKey = Base64.getUrlDecoder().decode("cRxMwjXEVDV0jgKLuTG4ePQRZG8YDReU7K7f1b3T9Zk=");
+        byte[] encryptedBlob = Base64.getDecoder().decode(encryptedB64);
+        byte[] nonce = new byte[16];
+        byte[] tag = new byte[16];
+        byte[] ciphertext = new byte[encryptedBlob.length - 32];
+        System.arraycopy(encryptedBlob, 0, nonce, 0, 16);
+        System.arraycopy(encryptedBlob, 16, tag, 0, 16);
+        System.arraycopy(encryptedBlob, 32, ciphertext, 0, ciphertext.length);
+        // Java expects ciphertext + tag
+        byte[] cipherTextWithTag = new byte[ciphertext.length + tag.length];
+        System.arraycopy(ciphertext, 0, cipherTextWithTag, 0, ciphertext.length);
+        System.arraycopy(tag, 0, cipherTextWithTag, ciphertext.length, tag.length);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        SecretKey key = new SecretKeySpec(aesKey, "AES");
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_LENGTH_BIT, nonce);
+        cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec);
+        byte[] plainText = cipher.doFinal(cipherTextWithTag);
+        return objectMapper.readValue(
+                plainText,
+                new TypeReference<Map<String, Object>>() {}
+        );
     }
 }
