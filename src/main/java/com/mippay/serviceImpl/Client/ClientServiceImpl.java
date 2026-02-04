@@ -3839,8 +3839,8 @@ public class ClientServiceImpl implements ClientService {
         Map<String,Object> request = new HashMap<>();
         request.put("amount", data.getAmount());
         request.put("external_order_id",data.getOrderId() );
-        request.put("success_url", "");
-        request.put("failure_url", "");
+        request.put("success_url", "google.com");
+        request.put("failure_url", "google.com");
         request.put("delivery_details", delivery);
         request.put("payment_mode", data.getTransferMode());
 
@@ -3851,7 +3851,6 @@ public class ClientServiceImpl implements ClientService {
         headers.set("Authorization", "Bearer "+ Generator.generateBuckBoxToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-//        String encRequest = "vuz5SZltAIAUKov/WR8gGHukVfj46FP2b85wVwS0lqFFs4aYNiDiV6eQg6USqAgrC7zVo/weasg5IiXHrwXZMwzxazMWtZTrcmfJ+KhubMFmt1Vt07GgzdN/tXFtndoTsxWx6X2RtuAos5Nm6/02S1K8V7x9EStx0/iZgsalsKNEj6jUqxt0Jb2x9HBjpdH0nS//bnGJGZvg7dayV6+1zzAF7Fj59P8DvJ5tnqg8khZ2aYcOCvRU8l5B+tPEESBB0KtPBmcz5JauaBRyqn6u0ld7kE94IjpqtRIScdXTjUPlRalTi/qF+wfwsMcqEKr+6aR20GbtCwJ/mVaJLm2s2/AZsbHKaV49saLnDB459s0N4B1rqP3vcOXdkmMoGiA=";
         String encRequest = AES256EncryptionGSM.encryptPayload(request);
         System.out.println("encRequest: "+encRequest);
 
