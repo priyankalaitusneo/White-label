@@ -3865,7 +3865,7 @@ public class ClientServiceImpl implements ClientService {
 
         String decRespons = AES256EncryptionGSM.decryptPayload(response.getBody().toString()).toString();
         System.out.println("decResponse: "+ decRespons);
-        return ResponseEntity.ok(response.getBody());
+        return ResponseEntity.ok(decRespons);
     }
 
 
