@@ -22,6 +22,7 @@ public class AES256EncryptionGSM {
     public static String encryptPayload(Map<String, Object> data) throws Exception {
 
         byte[] aesKey = Base64.getUrlDecoder().decode("cRxMwjXEVDV0jgKLuTG4ePQRZG8YDReU7K7f1b3T9Zk=");
+        System.out.println("aeskey: "+ aesKey);
         byte[] jsonBytes = objectMapper.writeValueAsString(data)
                 .getBytes(StandardCharsets.UTF_8);
 
