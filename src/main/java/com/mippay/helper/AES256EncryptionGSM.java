@@ -14,6 +14,7 @@ import java.util.Map;
 
 public class AES256EncryptionGSM {
 
+    private static final String AES_ALGO = "AES/GCM/NoPadding";
     private static final int NONCE_LENGTH = 16; // 16 bytes nonce
     private static final int TAG_LENGTH_BIT = 128; // 16 bytes auth tag
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -21,27 +22,36 @@ public class AES256EncryptionGSM {
     public static String encryptPayload(Map<String, Object> data) throws Exception {
 
         byte[] aesKey = Base64.getUrlDecoder().decode("cRxMwjXEVDV0jgKLuTG4ePQRZG8YDReU7K7f1b3T9Zk=");
-
         byte[] jsonBytes = objectMapper.writeValueAsString(data)
                 .getBytes(StandardCharsets.UTF_8);
+
+        // Generate nonce
         byte[] nonce = new byte[NONCE_LENGTH];
-        SecureRandom.getInstanceStrong().nextBytes(nonce);
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        SecretKey key = new SecretKeySpec(aesKey, "AES");
+        SecureRandom random = new SecureRandom();
+        random.nextBytes(nonce);
+
+        Cipher cipher = Cipher.getInstance(AES_ALGO);
         GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_LENGTH_BIT, nonce);
-        cipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec);
-        byte[] cipherTextWithTag = cipher.doFinal(jsonBytes);
-        // Java output = ciphertext + tag
-        int cipherTextLength = cipherTextWithTag.length - 16;
-        byte[] ciphertext = new byte[cipherTextLength];
+        SecretKeySpec keySpec = new SecretKeySpec(aesKey, "AES");
+
+        cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec);
+
+        byte[] encrypted = cipher.doFinal(jsonBytes);
+
+        // Java output = ciphertext + tag (last 16 bytes)
+        int tagStart = encrypted.length - 16;
+        byte[] ciphertext = new byte[tagStart];
         byte[] tag = new byte[16];
-        System.arraycopy(cipherTextWithTag, 0, ciphertext, 0, cipherTextLength);
-        System.arraycopy(cipherTextWithTag, cipherTextLength, tag, 0, 16);
-        // Python-compatible format: nonce + tag + ciphertext
+
+        System.arraycopy(encrypted, 0, ciphertext, 0, tagStart);
+        System.arraycopy(encrypted, tagStart, tag, 0, 16);
+
+        // nonce + tag + ciphertext (same as Python)
         byte[] encryptedBlob = new byte[nonce.length + tag.length + ciphertext.length];
         System.arraycopy(nonce, 0, encryptedBlob, 0, nonce.length);
         System.arraycopy(tag, 0, encryptedBlob, nonce.length, tag.length);
         System.arraycopy(ciphertext, 0, encryptedBlob, nonce.length + tag.length, ciphertext.length);
+
         return Base64.getEncoder().encodeToString(encryptedBlob);
     }
     /**
