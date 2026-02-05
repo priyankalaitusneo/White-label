@@ -3831,14 +3831,14 @@ public class ClientServiceImpl implements ClientService {
         RestTemplate restTemplate = new RestTemplate();
 
         Map<String,Object> delivery = new HashMap<>();
-        delivery.put("recipient_name", "JohnDoe");
-        delivery.put("recipient_email","t5ahfa5mepz@gmail.com" );
-        delivery.put("recipient_phone_number", "+918182192244");
-        delivery.put("user_id","cust123");
+        delivery.put("recipient_name", data.getName());
+        delivery.put("recipient_email",data.getEmail() );
+        delivery.put("recipient_phone_number", "+91"+data.getNumber());
+        delivery.put("user_id",data.getOrderId());
 
         Map<String,Object> request = new HashMap<>();
-        request.put("amount", 10);
-        request.put("external_order_id","a0111test" );
+        request.put("amount", data.getAmount());
+        request.put("external_order_id",data.getOrderId() );
 //        request.put("success_url", "google.com");
 //        request.put("failure_url", "google.com");
         request.put("delivery_details", delivery);
@@ -3877,10 +3877,10 @@ public class ClientServiceImpl implements ClientService {
 
             String encryptedResponse = objectMapper.readTree(errorBody).get("response").asText();
             System.out.println("encryptedResponse: "+encryptedResponse );
-            
+
             String decRespons = AES256EncryptionGSM.decryptPayload(encryptedResponse).toString();
             System.out.println("decResponse: "+ decRespons);
-            return ResponseEntity.ok(decRespons);
+            return ResponseEntity.badRequest().body(decRespons);
         }
 
     }
