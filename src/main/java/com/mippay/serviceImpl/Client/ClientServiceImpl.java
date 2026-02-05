@@ -3854,7 +3854,7 @@ public class ClientServiceImpl implements ClientService {
         String encRequest = AES256EncryptionGSM.encryptPayload(request);
         System.out.println("encRequest: "+encRequest);
 
-        HttpEntity<?> entity = new HttpEntity<>(encRequest, headers);
+        HttpEntity<String> entity = new HttpEntity<>(encRequest, headers);
         System.out.println("entity: "+entity);
 
         ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
