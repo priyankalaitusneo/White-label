@@ -3831,18 +3831,18 @@ public class ClientServiceImpl implements ClientService {
         RestTemplate restTemplate = new RestTemplate();
 
         Map<String,Object> delivery = new HashMap<>();
-        delivery.put("ecipient_name", data.getName());
-        delivery.put("ecipient_email",data.getEmail() );
+        delivery.put("recipient_name", data.getName());
+        delivery.put("recipient_email",data.getEmail() );
         delivery.put("recipient_phone_number", data.getNumber());
         delivery.put("user_id", data.getOrderId());
 
         Map<String,Object> request = new HashMap<>();
         request.put("amount", data.getAmount());
         request.put("external_order_id",data.getOrderId() );
-        request.put("success_url", "google.com");
-        request.put("failure_url", "google.com");
+//        request.put("success_url", "google.com");
+//        request.put("failure_url", "google.com");
         request.put("delivery_details", delivery);
-        request.put("payment_mode", data.getTransferMode());
+//        request.put("payment_mode", data.getTransferMode());
 
         System.out.println("request: "+ request);
 
