@@ -3860,12 +3860,26 @@ public class ClientServiceImpl implements ClientService {
         HttpEntity<Map<String,String>> entity = new HttpEntity<>(finalBody, headers);
         System.out.println("entity: "+entity);
 
-        ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-        System.out.println("response: "+response.getBody());
+        try{
+            ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+            System.out.println("response: "+response.getBody());
 
-        String decRespons = AES256EncryptionGSM.decryptPayload(response.getBody().toString()).toString();
-        System.out.println("decResponse: "+ decRespons);
-        return ResponseEntity.ok(decRespons);
+            String decResponse =
+                    AES256EncryptionGSM.decryptPayload(response.getBody().toString()).toString();
+            System.out.println("Decrypted response: " + decResponse);
+
+            return ResponseEntity.ok(decResponse);
+        }catch (HttpClientErrorException | HttpServerErrorException ex){
+            String errorBody = ex.getResponseBodyAsString();
+
+            System.out.println("HTTP Status: " + ex.getStatusCode());
+            System.out.println("Raw error response: " + errorBody);
+
+            String decRespons = AES256EncryptionGSM.decryptPayload(errorBody).toString();
+            System.out.println("decResponse: "+ decRespons);
+            return ResponseEntity.ok(decRespons);
+        }
+
     }
 
 
