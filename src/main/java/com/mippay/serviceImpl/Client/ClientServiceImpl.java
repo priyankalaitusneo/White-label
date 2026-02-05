@@ -3875,7 +3875,10 @@ public class ClientServiceImpl implements ClientService {
             System.out.println("HTTP Status: " + ex.getStatusCode());
             System.out.println("Raw error response: " + errorBody);
 
-            String decRespons = AES256EncryptionGSM.decryptPayload(errorBody).toString();
+            String encryptedResponse = objectMapper.readTree(errorBody).get("response").asText();
+            System.out.println("encryptedResponse: "+encryptedResponse );
+            
+            String decRespons = AES256EncryptionGSM.decryptPayload(encryptedResponse).toString();
             System.out.println("decResponse: "+ decRespons);
             return ResponseEntity.ok(decRespons);
         }
