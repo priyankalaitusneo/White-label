@@ -62,24 +62,33 @@ public class AES256EncryptionGSM {
 
         byte[] aesKey = Base64.getUrlDecoder().decode("cRxMwjXEVDV0jgKLuTG4ePQRZG8YDReU7K7f1b3T9Zk=");
         byte[] encryptedBlob = Base64.getDecoder().decode(encryptedB64);
+
         byte[] nonce = new byte[16];
         byte[] tag = new byte[16];
         byte[] ciphertext = new byte[encryptedBlob.length - 32];
+
         System.arraycopy(encryptedBlob, 0, nonce, 0, 16);
         System.arraycopy(encryptedBlob, 16, tag, 0, 16);
         System.arraycopy(encryptedBlob, 32, ciphertext, 0, ciphertext.length);
+
         // Java expects ciphertext + tag
         byte[] cipherTextWithTag = new byte[ciphertext.length + tag.length];
         System.arraycopy(ciphertext, 0, cipherTextWithTag, 0, ciphertext.length);
         System.arraycopy(tag, 0, cipherTextWithTag, ciphertext.length, tag.length);
+
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        SecretKey key = new SecretKeySpec(aesKey, "AES");
-        GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_LENGTH_BIT, nonce);
-        cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec);
+        cipher.init(
+                Cipher.DECRYPT_MODE,
+                new SecretKeySpec(aesKey, "AES"),
+                new GCMParameterSpec(TAG_LENGTH_BIT, nonce)
+        );
+
+//        SecretKey key = new SecretKeySpec(aesKey, "AES");
+//        GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_LENGTH_BIT, nonce);
+//        cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec);
         byte[] plainText = cipher.doFinal(cipherTextWithTag);
         return objectMapper.readValue(
-                plainText,
-                new TypeReference<Map<String, Object>>() {}
+                plainText, new TypeReference<Map<String, Object>>() {}
         );
     }
 }
