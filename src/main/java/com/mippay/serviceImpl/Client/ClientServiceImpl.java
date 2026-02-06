@@ -3864,9 +3864,10 @@ public class ClientServiceImpl implements ClientService {
             ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
             System.out.println("response: "+response.getBody());
 
-            String resp1 = response.getBody().toString();
+            JSONObject resp1 = new JSONObject(response.getBody().toString());
+            System.out.println("resp1: "+resp1);
 
-            String decResponse = AES256EncryptionGSM.decryptPayload(resp1).toString();
+            String decResponse = AES256EncryptionGSM.decryptPayload(resp1.get("response").toString()).toString();
             System.out.println("Decrypted response: " + decResponse);
 
             return ResponseEntity.ok(decResponse);
