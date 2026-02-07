@@ -674,10 +674,10 @@ System.out.println(expectedAuthHeader+"ghjkjhgf");
         return token;
     }
 
-    @PostMapping("buckbox-payin")
-    public ResponseEntity<?> buckboxPayin (@RequestBody PayinRecords data) throws Exception {
-        System.out.println("generate Token");
-        ResponseEntity<?> response = this.clientService.buckBoxPayin(data);
-        return response;
-    }
+//    @PostMapping("buckbox-payin")
+//    public ResponseEntity<?> buckboxPayin (@RequestBody PayinRecords data) throws Exception {
+//        System.out.println("generate Token");
+//        ResponseEntity<?> response = this.clientService.buckBoxPayin(data);
+//        return response;
+//    }
 }

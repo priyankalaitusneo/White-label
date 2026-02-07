@@ -170,5 +170,5 @@ public interface ClientService {
 
 	String handlePhonePeWebhook(Map<String, Object> request);
 
-    ResponseEntity<?> buckBoxPayin(PayinRecords data) throws Exception;
+//    ResponseEntity<?> buckBoxPayin(PayinRecords data) throws Exception;
 }

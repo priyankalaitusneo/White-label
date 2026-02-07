@@ -41,4 +41,7 @@ public interface IpRepository extends JpaRepository<IpAddress, Integer> {
     	)
     	List<Map<String, Object>> findAllIpList();
 
+    @Query(value = "select * from ip_address where user_id =:userId and ip_address =:ip", nativeQuery = true)
+    Optional<IpAddress> findByUserIdAndIp(String userId, String ip);
+
 }
