@@ -1901,7 +1901,9 @@ public class ClientServiceImpl implements ClientService {
         // --------------------------------------------------------
 
         ResponseEntity<?> payinResp = this.buckBoxPayin(data);
-        logger.info("payin response recieved:  {}", payinResp.getBody());
+
+        System.out.println("calling payin pipe inside the main flow");
+        logger.info("payin response recieved:  {}", payinResp);
 
 //        String resp = payinResp.getBody().toString();
 //        JSONObject json = new JSONObject(resp);
