@@ -1899,11 +1899,24 @@ public class ClientServiceImpl implements ClientService {
         // --------------------------------------------------------
         // 8) CALLING PAYIN METHOD BASED ON PGID
         // --------------------------------------------------------
+        try{
+            ResponseEntity<?> payinResp = this.buckBoxPayin(data);
+            logger.info("payin response recieved:  {}", payinResp);
 
-        ResponseEntity<?> payinResp = this.buckBoxPayin(data);
+        }catch (Exception ex){
+            String errorBody = ex.getMessage();
 
-        System.out.println("calling payin pipe inside the main flow");
-        logger.info("payin response recieved:  {}", payinResp);
+            System.out.println("HTTP Status: " + errorBody);
+
+            String encryptedResponse = objectMapper.readTree(errorBody).get("response").asText();
+            System.out.println("encryptedResponse: "+encryptedResponse );
+
+            String decRespons = AES256EncryptionGSM.decryptPayload(encryptedResponse).toString();
+            System.out.println("decResponse: "+ decRespons);
+            return ResponseEntity.badRequest().body(decRespons);
+        }
+
+
 
 //        String resp = payinResp.getBody().toString();
 //        JSONObject json = new JSONObject(resp);
