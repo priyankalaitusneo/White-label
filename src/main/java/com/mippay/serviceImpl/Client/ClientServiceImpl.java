@@ -1903,14 +1903,16 @@ public class ClientServiceImpl implements ClientService {
 
         ResponseEntity<?> payinResp = this.buckBoxPayin(data);
         logger.info("payin response recieved:  {}", payinResp.getBody());
-        
+
+        JSONObject paymentData = new JSONObject(payinResp.getBody().toString());
+        System.out.println("paymentData: "+paymentData);
+
 
 //        String resp = payinResp.getBody().toString();
 //        JSONObject json = new JSONObject(resp);
 //        logger.info("json response: {}", json);
 //
-//        JSONObject paymentData = json.getJSONObject("payment_data");
-//        System.out.println("paymentData: "+paymentData);
+//
 //
 //        JSONObject extendedData = paymentData.getJSONObject("extended_data");
 //        System.out.println("extendedData: "+extendedData);
