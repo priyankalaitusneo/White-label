@@ -1910,23 +1910,10 @@ public class ClientServiceImpl implements ClientService {
         if(paymentData.get("bbStatusMsg").toString().equals("BAD_REQUEST")){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseDto.builder().message("ERROR").status("BAD_REQUEST").data(paymentData.getJSONObject("bbErrorMsg").toString(2)).build());
-
         }
 
-
-//        String resp = payinResp.getBody().toString();
-//        JSONObject json = new JSONObject(resp);
-//        logger.info("json response: {}", json);
-//
-//
-//
-//        JSONObject extendedData = paymentData.getJSONObject("extended_data");
-//        System.out.println("extendedData: "+extendedData);
-//
-//        String upiUrl = extendedData.getString("qr_code_content");
-
         responseDto = this.payinResponseGenerate(data,calc,savedRecord);
-        responseDto.setRedirect_url("upiUrl");
+//        responseDto.setRedirect_url("upiUrl");
         // --------------------------------------------------------
         // 9) RETURN SUCCESS RESPONSE
         // --------------------------------------------------------
@@ -3761,7 +3748,7 @@ public class ClientServiceImpl implements ClientService {
         Map<String,Object> delivery = new HashMap<>();
         delivery.put("recipient_name", data.getName());
         delivery.put("recipient_email",data.getEmail() );
-        delivery.put("recipient_phone_number", data.getPhone());
+        delivery.put("recipient_phone_number", "+91"+data.getPhone());
         delivery.put("user_id",data.getOrderId());
 
         Map<String,Object> request = new HashMap<>();
