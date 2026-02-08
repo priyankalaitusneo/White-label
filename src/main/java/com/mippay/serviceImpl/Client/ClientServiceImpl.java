@@ -1904,7 +1904,7 @@ public class ClientServiceImpl implements ClientService {
         ResponseEntity<?> payinResp = this.buckBoxPayin(data);
         logger.info("payin response recieved:  {}", payinResp.getBody());
 
-        JSONObject paymentData = new JSONObject(payinResp.getBody().toString());
+        JSONObject paymentData = new JSONObject(payinResp.getBody().toString().replace("=", ":"));
         System.out.println("paymentData: "+paymentData);
 
 
