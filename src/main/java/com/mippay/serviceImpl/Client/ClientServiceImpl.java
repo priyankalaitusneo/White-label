@@ -1909,7 +1909,7 @@ public class ClientServiceImpl implements ClientService {
 
         if(paymentData.get("bbStatusMsg").toString().equals("BAD_REQUEST")){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseDto.builder().message("ERROR").status("BAD_REQUEST").data(paymentData.getJSONObject("bbErrorMsg")).build());
+                    ResponseDto.builder().message("ERROR").status("BAD_REQUEST").data(paymentData.getJSONObject("bbErrorMsg").toString(2)).build());
 
         }
 
