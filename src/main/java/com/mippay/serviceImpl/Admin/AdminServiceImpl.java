@@ -48,12 +48,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -88,7 +83,8 @@ public class AdminServiceImpl implements AdminService {
 	private LienRepository lienRepository;
 	@Autowired
 	private LienHistoryRepository lienHistoryRepository;
-	
+	@Autowired
+    private SettlementRecordRepository settlementRepository;
 	@Autowired
 	private VendorsRepository vendorsRepository;
 
@@ -1635,15 +1631,45 @@ public class AdminServiceImpl implements AdminService {
         );
     }
 
+    @Override
+    public ResponseEntity<?> settleNow(SettlementRecord data) {
+        Optional<SettlementRecord> record = this.settlementRepository.findByUserIdAndDate(data.getUserId(), data.getDate());
+        if(record.isPresent()){
+            System.out.println("records: "+ record.get().getSettlementStatus());
+            if(record.get().getSettlementStatus().equals("PENDING")){
+                System.out.println("inside Pending");
+                this.settlementRepository.updateByUserIdAndDate(data.getFromAccountHolder(), data.getFromAccountNumber(),
+                        data.getFromBankName(), data.getFromIfscCode(), data.getToAccountNumber(), data.getToBankName(), data.getToIfscCode(),
+                        data.getToAccountHolder(), data.getUtrNumber(),data.getSettledDate(), data.getSettlementStatus(), data.getUserId(), data.getDate());
 
+                ResponseDto response =  ResponseDto.builder().status("OK").message("SUCCESS").data("Amount Settled successfully..!").build();
+                return ResponseEntity.ok(response);
+            }
+            if(record.get().getSettlementStatus().equals("SETTLED")){
+                System.out.println("Inside Settled ");
+                ResponseDto resonse = ResponseDto.builder().status("BAD_REQUEST").message("ERROR").data("An amount is already settled for seleted date and userId ..!").build();
+                return ResponseEntity.badRequest().body(resonse);
+            }
+            ResponseDto resonse = ResponseDto.builder().status("BAD_REQUEST").message("ERROR").data("something went wrong ..!").build();
+            return ResponseEntity.badRequest().body(resonse);
+        }else{
+            ResponseDto resonse = ResponseDto.builder().status("BAD_REQUEST").message("ERROR").data("Please provide correct data ..!").build();
+            return ResponseEntity.badRequest().body(resonse);
+        }
+    }
 
-	
-
-	
-
-
-
-
+    @Override
+    public ResponseEntity<?> settlementRecords() {
+        List<SettlementRecord> recodrs = this.settlementRepository.findAll();
+        Collections.reverse(recodrs);
+        if(recodrs.size() > 0){
+            ResponseDto resonse = ResponseDto.builder().status("OK").message("SUCCESS").data(recodrs).build();
+            return ResponseEntity.ok(resonse);
+        }else{
+            ResponseDto resonse = ResponseDto.builder().status("BAD_REQUEST").message("ERROR").data("No records found ..!").build();
+            return ResponseEntity.badRequest().body(resonse);
+        }
+    }
 
 
 }

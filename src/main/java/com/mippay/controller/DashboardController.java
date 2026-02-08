@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -18,7 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/dashboards")
+@RequestMapping("/payment")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
@@ -29,7 +30,7 @@ public class DashboardController {
 
 
 	
-    @GetMapping("/getPayinData")
+    @GetMapping("/admin/getPayinData")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getPayinDashboard(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -57,8 +58,16 @@ public class DashboardController {
                     .body("Error fetching Payin dashboard: " + e.getMessage());
         }
     }
-    
-    @GetMapping("/getPayoutData")
+
+
+    @PostMapping("/admin/dashboard/payin-byDate")
+    ResponseEntity<?> payinDataByDate (@RequestBody Map<String,Object> data){
+        ResponseEntity<?> response = this.dashboardService.payinDataByDate(data);
+        return response;
+    }
+
+
+    @GetMapping("admin/getPayoutData")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getPayoutDashboard(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,

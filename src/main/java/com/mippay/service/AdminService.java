@@ -2,6 +2,7 @@ package com.mippay.service;
 
 import com.mippay.entity.Admin.PayInCharges;
 import com.mippay.entity.Client.Client;
+import com.mippay.entity.Client.SettlementRecord;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
@@ -136,6 +137,9 @@ public interface AdminService {
 	ResponseEntity<?> payinWebhookList();
 
 	ResponseEntity<?> payoutWebhookList();
-	
-	
+
+
+    ResponseEntity<?> settleNow(SettlementRecord data);
+
+    ResponseEntity<?> settlementRecords();
 }

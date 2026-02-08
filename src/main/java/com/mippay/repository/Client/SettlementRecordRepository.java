@@ -1,6 +1,7 @@
 package com.mippay.repository.Client;
 
 import com.mippay.entity.Client.SettlementRecord;
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -291,5 +292,19 @@ public interface SettlementRecordRepository extends JpaRepository<SettlementReco
     	        @Param("fromDate") LocalDateTime fromDate,
     	        @Param("toDate") LocalDateTime toDate
     	    );
-    		
+
+    @Query(value = "select * from settlement_records where user_id =:userId and date =:date", nativeQuery = true)
+    Optional<SettlementRecord> findByUserIdAndDate(String userId, String date);
+
+    @Transactional
+    @Modifying
+    @Query(value = "delete from settlement_records where user_id =:userId and date =:date", nativeQuery = true)
+    void deleteByUserIdAndDate(String userId, String date);
+
+
+    @Transactional
+    @Modifying
+    @Query(value = "update settlement_records set from_account_holder =:fromName, from_account_number =:fromAcc, from_bank_name =:fromBank, from_ifsc_code =:fromIfsc, to_account_holder =:toAcc, to_account_number =:toBank, to_account_number =:toName, to_account_number =:toIfsc, utr_number =:utr, settled_date =:settledDate, settlement_status =:status where  user_id =:userId and date =:date ", nativeQuery = true)
+    void updateByUserIdAndDate(String fromName, String fromAcc, String fromBank, String fromIfsc, String toAcc, String toBank, String toIfsc, String toName, String utr, String settledDate, String status, String userId, String date);
+
 }

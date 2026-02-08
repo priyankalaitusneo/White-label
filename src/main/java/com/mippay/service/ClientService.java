@@ -170,5 +170,11 @@ public interface ClientService {
 
 	String handlePhonePeWebhook(Map<String, Object> request);
 
+    ResponseEntity<?> payinDashboard(String clientId);
+
+    ResponseEntity<?> settlementByClientId(String clientId);
+
+    ResponseEntity<?> settlementListByClientId(String clientId);
+
 //    ResponseEntity<?> buckBoxPayin(PayinRecords data) throws Exception;
 }

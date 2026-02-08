@@ -674,6 +674,20 @@ System.out.println(expectedAuthHeader+"ghjkjhgf");
         return token;
     }
 
+    @GetMapping("dashboard-payin/{clientId}")
+    public ResponseEntity<?> payinDashboard(@PathVariable String clientId) {
+        ResponseEntity<?> response = this.clientService.payinDashboard(clientId);
+        return response;
+    }
+
+    @GetMapping("settlement-list/{clientId}")
+    public ResponseEntity<?> settlementByClientId(@PathVariable String clientId) {
+        ResponseEntity<?> response = this.clientService.settlementByClientId(clientId);
+        return response;
+    }
+
+
+
 //    @PostMapping("buckbox-payin")
 //    public ResponseEntity<?> buckboxPayin (@RequestBody PayinRecords data) throws Exception {
 //        System.out.println("generate Token");

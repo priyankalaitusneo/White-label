@@ -23,10 +23,7 @@ import com.mippay.entity.Admin.Charges;
 import com.mippay.entity.Admin.PayInCharges;
 import com.mippay.entity.Admin.Role;
 
-import com.mippay.entity.Client.Client;
-import com.mippay.entity.Client.IpAddress;
-import com.mippay.entity.Client.LienAmount;
-import com.mippay.entity.Client.LienHistory;
+import com.mippay.entity.Client.*;
 
 import com.mippay.response.AdminRoleResponseDto;
 import com.mippay.response.AdminSettlementHistoryResponseDTO;
@@ -1065,4 +1062,20 @@ public class AdminController {
 	 }
 
 
+    @PostMapping("/settle-now")
+    public ResponseEntity<?> settleNow(@RequestBody SettlementRecord data ) {
+        return adminService.settleNow(data);
+    }
+
+    @GetMapping("/settlement-records")
+    public ResponseEntity<?> settlementRecords(){
+        return adminService.settlementRecords();
+    }
+
+
+    @GetMapping("settlementList/{clientId}")
+    public ResponseEntity<?> settlementListByClientId(@PathVariable String clientId){
+        ResponseEntity<?> response = this.clientService.settlementListByClientId(clientId);
+        return response;
+    }
 }

@@ -350,4 +350,12 @@ public class AuthController {
 
       return clientService.handlePhonePeWebhook(request);
   }
+
+
+  @PostMapping("buckbox-callback")
+    public String buckBoxCallBack(@RequestBody Map<String, Object> data){
+      System.out.println("Call back recieved from buckBox: "+ data);
+      return "SUCCESS";
+  }
+
 }

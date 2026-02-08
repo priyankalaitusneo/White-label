@@ -57,6 +57,7 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import java.time.LocalDate;
@@ -122,11 +123,10 @@ public class ClientServiceImpl implements ClientService {
     
     @Autowired
     private  PhonePeAuthService authService;
-
+    @Autowired
+    private SettlementRecordRepository settlementRepository;
     @Value("${phonepe.order-status-url}")
     private String orderStatusBaseUrl;
-
-   
     @Autowired
     private PhonePeAuthService phonePeAuthService;
 
@@ -1913,7 +1913,12 @@ public class ClientServiceImpl implements ClientService {
         }
 
         responseDto = this.payinResponseGenerate(data,calc,savedRecord);
-//        responseDto.setRedirect_url("upiUrl");
+
+        if(paymentData.get("bbStatusMsg").toString().equals("SUCCESS")){
+            JSONObject json =  paymentData.getJSONObject("TransactionData");
+            System.out.println("json: "+ json);
+            responseDto.setRedirect_url(json.get("payment_url").toString());
+        }
         // --------------------------------------------------------
         // 9) RETURN SUCCESS RESPONSE
         // --------------------------------------------------------
@@ -3737,6 +3742,83 @@ public class ClientServiceImpl implements ClientService {
 
         // ALWAYS acknowledge PhonePe
         return "SUCCESS";
+    }
+
+    @Override
+    public ResponseEntity<?> payinDashboard(String clientId) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        String date = LocalDate.now().format(formatter);
+        System.out.println("date: "+date);
+
+        List<Map<String, Object>> data = this.payinRepository.fetchTodaysData(date,clientId);
+        System.out.println("data: "+ data);
+
+        if(data.size() > 0){
+            ResponseDto resonse = ResponseDto.builder().status("OK").message("SUCCESS").data(data).build();
+            return ResponseEntity.ok(resonse);
+        }else{
+            ResponseDto resonse = ResponseDto.builder().status("BAD_REQUEST").message("ERROR").data("No records found ..!").build();
+            return ResponseEntity.badRequest().body(resonse);
+        }
+    }
+
+    @Override
+    public ResponseEntity<?> settlementByClientId(String clientId) {
+        List<SettlementRecord> recodrs = this.settlementRepository.findByUserId(clientId);
+        Collections.reverse(recodrs);
+        if(recodrs.size() > 0){
+            ResponseDto resonse = ResponseDto.builder().status("OK").message("SUCCESS").data(recodrs).build();
+            return ResponseEntity.ok(resonse);
+        }else{
+            ResponseDto resonse = ResponseDto.builder().status("BAD_REQUEST").message("ERROR").data("No records found ..!").build();
+            return ResponseEntity.badRequest().body(resonse);
+        }
+    }
+
+    @Override
+    public ResponseEntity<?> settlementListByClientId(String clientId) {
+        List<Map<String,Object>> list = this.payinRepository.fetchPayinDataOnDailyBasis(clientId);
+        System.out.println("list: "+ list);
+        int size = list.size();
+        for (int i = 0; i < size; i++) {
+            Map<String,Object> map = new HashMap<>();
+            map = list.get(i);
+            System.out.println("i : "+i);
+            System.out.println("Single Data: " + map);
+
+            String userId = map.get("user_id").toString();
+            System.out.println("userId: "+userId);
+            String date = map.get("date").toString();
+            System.out.println("dated: "+date);
+            Optional<SettlementRecord> record = this.settlementRepository.findByUserIdAndDate(userId, date);
+            if(record.isPresent()){
+                System.out.println("Nothing..!");;
+            }else{
+                String recDate = date.substring(0,10);
+                System.out.println("recDate: "+recDate);
+
+                LocalDate localDate = LocalDate.now();
+
+                String formatted = localDate.format(DateTimeFormatter.ISO_LOCAL_DATE);
+                System.out.println("formatted: "+formatted);
+                if(recDate.equals(formatted)){
+                    this.settlementRepository.deleteByUserIdAndDate(userId, date);
+                }
+                SettlementRecord stmt = new SettlementRecord();
+                stmt.setCharges(map.get("charges").toString());
+                stmt.setDate(map.get("date").toString());
+                stmt.setMerchantName(map.get("name").toString());
+                stmt.setMobile(map.get("phone").toString());
+                stmt.setEmail(map.get("email").toString());
+                stmt.setSettlementAmount(map.get("amount").toString());
+                stmt.setCount(map.get("count").toString());
+                stmt.setGst(map.get("gst").toString());
+                stmt.setUserId(map.get("user_id").toString());
+                stmt.setSettlementStatus("PENDING");
+                this.settlementRepository.save(stmt);
+            }
+        }
+        return ResponseEntity.ok(list);
     }
 
 

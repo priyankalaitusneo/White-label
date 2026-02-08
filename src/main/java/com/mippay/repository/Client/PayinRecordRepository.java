@@ -327,4 +327,15 @@ public interface PayinRecordRepository extends JpaRepository<PayinRecords, Integ
 	    @Query(value = "update payin_records set status =:success, status_code =:txns, utr =:utr where order_id =:orderId", nativeQuery = true)
 	    void updateStatusByOrderId(String success, String txns,String utr, String orderId);
 
+    @Query(value = "select sum(amount) as amount, status, count(*) from payin_records where user_id =:clientId  and date(created_date) =:date  group by status", nativeQuery = true)
+    List<Map<String, Object>> fetchTodaysData(String date, String clientId);
+
+    @Query(value = "select sum(amount) as amount, status, count(*)as count from payin_records group by status", nativeQuery = true)
+    List<Map<String, Object>> fetchPayinDataForAdmin();
+
+    @Query(value = "select sum(amount) as amount, status, count(*)as count from payin_records where date(created_date) >=:from and date(created_date) <=:to  group by status", nativeQuery = true)
+    List<Map<String, Object>> fetchPayinDataForAdminByDate(String from, String to);
+
+    @Query(value = "select c.name as name, c.mobile_num as phone, c.email as email, sum(p.amount) as amount, count(*) as count, sum(p.charges) as charges, sum(p.gst_charges) as gst, date(p.created_date) as date, p.user_id from payin_records as p join clients as c on c.user_id = p.user_id where p.user_id =:clientId and p.status = 'SUCCESS' group by date(p.created_date) ", nativeQuery = true)
+    List<Map<String, Object>> fetchPayinDataOnDailyBasis(String clientId);
 }

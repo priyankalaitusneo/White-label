@@ -1,6 +1,9 @@
 package com.mippay.serviceImpl.Admin;
 
+import com.mippay.dto.Admin.ResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.mippay.dto.Admin.DashboardRequestDTO;
@@ -411,7 +414,37 @@ public class DashboardServiceImpl implements DashboardService {
 			}
 		}
 
-		// HELPER METHOD: Convert Object to Integer
+    @Override
+    public ResponseEntity<?> payinDataByDate(Map<String, Object> data) {
+        String from = null, to = null ;
+        if(data.containsKey("from")){
+            from = data.get("from").toString();
+        }
+        if(data.containsKey("to")){
+            to = data.get("to").toString();
+        }
+        if(from == null && to == null){
+            List<Map<String,Object>> resp = this.payinRecordRepository.fetchPayinDataForAdmin();
+            if(resp.size() > 0){
+                ResponseDto response = ResponseDto.builder().status("SUCCESS").statusCode(200).response(resp).build();
+                return ResponseEntity.ok(response);
+            }else{
+                ResponseDto response = ResponseDto.builder().status("ERROR").statusCode(401).response("No records found..!").build();
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+            }
+        }else{
+            List<Map<String,Object>> resp = this.payinRecordRepository.fetchPayinDataForAdminByDate(from, to);
+            if(resp.size() > 0){
+                ResponseDto response = ResponseDto.builder().status("SUCCESS").statusCode(200).response(resp).build();
+                return ResponseEntity.ok(response);
+            }else{
+                ResponseDto response = ResponseDto.builder().status("ERROR").statusCode(401).response("No records found..!").build();
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+            }
+        }
+    }
+
+    // HELPER METHOD: Convert Object to Integer
 		 
 		private Integer convertToInteger(Object value) {
 			if (value == null) {
