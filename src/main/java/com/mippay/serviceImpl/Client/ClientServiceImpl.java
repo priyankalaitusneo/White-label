@@ -1907,6 +1907,12 @@ public class ClientServiceImpl implements ClientService {
         JSONObject paymentData = new JSONObject(payinResp.getBody().toString().replace("=", ":"));
         System.out.println("paymentData: "+paymentData);
 
+        if(paymentData.get("bbStatusMsg").toString().equals("BAD_REQUEST")){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseDto.builder().message("ERROR").status("BAD_REQUEST").data("Something went wrong..!").build());
+
+        }
+
 
 //        String resp = payinResp.getBody().toString();
 //        JSONObject json = new JSONObject(resp);
@@ -3755,7 +3761,7 @@ public class ClientServiceImpl implements ClientService {
         Map<String,Object> delivery = new HashMap<>();
         delivery.put("recipient_name", data.getName());
         delivery.put("recipient_email",data.getEmail() );
-        delivery.put("recipient_phone_number", "+91"+data.getPhone());
+        delivery.put("recipient_phone_number", data.getPhone());
         delivery.put("user_id",data.getOrderId());
 
         Map<String,Object> request = new HashMap<>();
