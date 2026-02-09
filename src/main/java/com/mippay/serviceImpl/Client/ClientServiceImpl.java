@@ -34,6 +34,15 @@ import com.mippay.util.JWTHelper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +60,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
@@ -3883,6 +3893,171 @@ public class ClientServiceImpl implements ClientService {
         }
 
     }
+
+    
+    @Override
+    public ResponseEntity<?> downloadPayinReportsExcel(
+            String userId,
+            String status,
+            String paymentMethod,
+            LocalDate fromDate,
+            LocalDate toDate
+    ) throws Exception {
+
+        // 🔒 Normalize inputs
+        String safeStatus = (status == null || status.isBlank()) ? null : status;
+        String safePaymentMethod = (paymentMethod == null || paymentMethod.isBlank()) ? null : paymentMethod;
+
+        List<PayinRecords> records =
+                payinRepository.findAllPayinByUserIdForExcel(
+                        userId, safeStatus, safePaymentMethod, fromDate, toDate
+                );
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Payin Report");
+
+        /* ================= STYLES ================= */
+
+        // Header Style
+        CellStyle headerStyle = workbook.createCellStyle();
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+
+        // Success Style
+        CellStyle successStyle = workbook.createCellStyle();
+        successStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+        successStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        // Failed Style
+        CellStyle failedStyle = workbook.createCellStyle();
+        failedStyle.setFillForegroundColor(IndexedColors.ROSE.getIndex());
+        failedStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        // Date Style
+        CellStyle dateStyle = workbook.createCellStyle();
+        dateStyle.setDataFormat(
+                workbook.getCreationHelper()
+                        .createDataFormat()
+                        .getFormat("dd MMM yyyy, hh:mm AM/PM")
+        );
+
+        /* ================= HEADER ================= */
+
+        String[] columns = {
+                "User ID", "Name", "Email", "Mobile", "Address",
+                "Transaction ID", "Order ID", "UTR", "PG ID",
+                "Amount", "Charges", "GST Charges", "Total Charges", "Final Amount",
+                "Status", "Status Code", "Refund Status", "Settlement Status",
+                "Current Balance", "Updated Balance",
+                "Transaction Time", "Created Date", "Updated Date"
+        };
+
+        Row header = sheet.createRow(0);
+        for (int i = 0; i < columns.length; i++) {
+            Cell cell = header.createCell(i);
+            cell.setCellValue(columns[i]);
+            cell.setCellStyle(headerStyle);
+        }
+
+        /* ================= DATA ================= */
+
+        int rowNum = 1;
+        for (PayinRecords r : records) {
+
+            Row row = sheet.createRow(rowNum++);
+            int c = 0;
+
+            row.createCell(c++).setCellValue(nvl(r.getUserId()));
+            row.createCell(c++).setCellValue(nvl(r.getName()));
+            row.createCell(c++).setCellValue(nvl(r.getEmail()));
+            row.createCell(c++).setCellValue(nvl(r.getMobile()));
+            row.createCell(c++).setCellValue(nvl(r.getAddress()));
+
+            row.createCell(c++).setCellValue(nvl(r.getTrxnid()));
+            row.createCell(c++).setCellValue(nvl(r.getOrderId()));
+            row.createCell(c++).setCellValue(nvl(r.getUtr()));
+            row.createCell(c++).setCellValue(nvl(r.getPgId()));
+
+//            row.createCell(c++).setCellValue(nvl(r.getPaymentMethod()));
+//            row.createCell(c++).setCellValue(nvl(r.getTransferMode()));
+//            row.createCell(c++).setCellValue(nvl(r.getIfsc()));
+
+            row.createCell(c++).setCellValue(nvl(r.getAmount()));
+            row.createCell(c++).setCellValue(r.getCharges());
+            row.createCell(c++).setCellValue(r.getGstCharges());
+            row.createCell(c++).setCellValue(r.getTotalCharges());
+            row.createCell(c++).setCellValue(r.getFinalAmount());
+
+            Cell statusCell = row.createCell(c++);
+            statusCell.setCellValue(nvl(r.getStatus()));
+            if ("SUCCESS".equalsIgnoreCase(r.getStatus())) {
+                statusCell.setCellStyle(successStyle);
+            } else if ("FAILED".equalsIgnoreCase(r.getStatus())) {
+                statusCell.setCellStyle(failedStyle);
+            }
+
+            row.createCell(c++).setCellValue(nvl(r.getStatusCode()));
+            row.createCell(c++).setCellValue(nvl(r.getRefundStatus()));
+            row.createCell(c++).setCellValue(nvl(r.getSettlementStatus()));
+
+            row.createCell(c++).setCellValue(r.getCurrentBalance());
+            row.createCell(c++).setCellValue(r.getUpdatedBalance());
+
+            row.createCell(c++).setCellValue(nvl(r.getTimeStamp()));
+
+            Cell createdCell = row.createCell(c++);
+            if (r.getCreatedDate() != null) {
+                createdCell.setCellValue(r.getCreatedDate());
+                createdCell.setCellStyle(dateStyle);
+            } else {
+                createdCell.setCellValue("-");
+            }
+
+            Cell updatedCell = row.createCell(c++);
+            if (r.getUpdatedDate() != null) {
+                updatedCell.setCellValue(r.getUpdatedDate());
+                updatedCell.setCellStyle(dateStyle);
+            } else {
+                updatedCell.setCellValue("-");
+            }
+        }
+
+        for (int i = 0; i < columns.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        /* ================= RESPONSE ================= */
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        workbook.write(out);
+        workbook.close();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(
+                MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        );
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename("payin-report.xlsx")
+                        .build()
+        );
+System.out.println(headers+"'''''''");
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(out.toByteArray());
+    }
+
+    private String nvl(String val) {
+        return val != null ? val : "-";
+    }
+
+    private double nvl(Double val) {
+        return val != null ? val : 0.0;
+    }
+
 
 
 }

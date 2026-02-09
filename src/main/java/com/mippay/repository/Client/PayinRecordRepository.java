@@ -338,4 +338,46 @@ public interface PayinRecordRepository extends JpaRepository<PayinRecords, Integ
 
     @Query(value = "select c.name as name, c.mobile_num as phone, c.email as email, sum(p.amount) as amount, count(*) as count, sum(p.charges) as charges, sum(p.gst_charges) as gst, date(p.created_date) as date, p.user_id from payin_records as p join clients as c on c.user_id = p.user_id where p.user_id =:clientId and p.status = 'SUCCESS' group by date(p.created_date) ", nativeQuery = true)
     List<Map<String, Object>> fetchPayinDataOnDailyBasis(String clientId);
+    
+    @Query(
+    	    value = """
+    	        SELECT *
+    	        FROM payin_records
+    	        WHERE user_id = :userId
+    	          AND (:status IS NULL OR status = :status)
+    	          AND (:paymentMethod IS NULL OR payment_method = :paymentMethod)
+    	          AND (:fromDate IS NULL OR DATE(created_date) >= :fromDate)
+    	          AND (:toDate IS NULL OR DATE(created_date) <= :toDate)
+    	        ORDER BY created_date DESC
+    	        """,
+    	    nativeQuery = true
+    	)
+    	List<PayinRecords> findAllPayinByUserIdForExcel(
+    	        @Param("userId") String userId,
+    	        @Param("status") String status,
+    	        @Param("paymentMethod") String paymentMethod,
+    	        @Param("fromDate") LocalDate fromDate,
+    	        @Param("toDate") LocalDate toDate
+    	);
+    
+    @Query(
+    	    value = """
+    	        SELECT pr.*
+    	        FROM payin_records pr
+    	        WHERE (:merchantId IS NULL OR pr.user_id = :merchantId)
+    	          AND (:status IS NULL OR pr.status = :status)
+    	          AND (:orderId IS NULL OR pr.order_id = :orderId)
+    	          AND (:fromDate IS NULL OR DATE(pr.created_date) >= :fromDate)
+    	          AND (:toDate IS NULL OR DATE(pr.created_date) <= :toDate)
+    	        ORDER BY pr.created_date DESC
+    	        """,
+    	    nativeQuery = true
+    	)
+    	List<Map<String, Object>> getPayinReportForExcel(
+    	    @Param("merchantId") String merchantId,
+    	    @Param("status") String status,
+    	    @Param("orderId") String orderId,
+    	    @Param("fromDate") LocalDate fromDate,
+    	    @Param("toDate") LocalDate toDate
+    	);
 }

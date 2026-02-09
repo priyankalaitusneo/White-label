@@ -694,4 +694,29 @@ System.out.println(expectedAuthHeader+"ghjkjhgf");
 //        ResponseEntity<?> response = this.clientService.buckBoxPayin(data);
 //        return response;
 //    }
+    
+    @GetMapping("/payin-reports/{userId}/excel")
+    public ResponseEntity<?> downloadPayinReportsExcel(
+            @PathVariable String userId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String paymentMethod,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
+    ) {
+        logger.info(
+            "PAYIN EXCEL | userId={}, status={}, method={}, fromDate={}, toDate={}",
+            userId, status, paymentMethod, fromDate, toDate
+        );
+
+        try {
+            return clientService.downloadPayinReportsExcel(
+                    userId, status, paymentMethod, fromDate, toDate
+            );
+        } catch (Exception ex) {
+            logger.error("Error downloading payin excel | userId={}", userId, ex);
+            return internalErrorResponse("downloadPayinReportsExcel", ex);
+        }
+    }
 }

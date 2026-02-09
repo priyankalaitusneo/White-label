@@ -1,20 +1,30 @@
 package com.mippay.serviceImpl.Admin;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import java.util.stream.Collectors;
-
+import org.springframework.http.ContentDisposition;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
@@ -503,6 +513,147 @@ public class ReportServiceImpl implements ReportService {
 
 		
 	
+		@Override
+		public ResponseEntity<?> downloadAdminPayinReportExcel(
+		        String merchantId,
+		        String status,
+		        String orderId,
+		        LocalDate fromDate,
+		        LocalDate toDate
+		) throws Exception {
+			 merchantId = normalize(merchantId);
+			    status     = normalize(status);
+			    orderId    = normalize(orderId);
+
+			    log.info(
+			        "ADMIN PAYIN EXCEL | merchantId={}, status={}, orderId={}, fromDate={}, toDate={}",
+			        merchantId, status, orderId, fromDate, toDate
+			    );
+
+			    List<Map<String, Object>> records =
+			            payinRecordRepository.getPayinReportForExcel(
+			                    merchantId, status, orderId, fromDate, toDate
+			            );
+
+
+		    Workbook workbook = new XSSFWorkbook();
+		    Sheet sheet = workbook.createSheet("Admin Payin Report");
+
+		    /* ================= HEADER ================= */
+
+		    String[] columns = {
+		            "User ID", "Name", "Email", "Mobile", "Address",
+		            "Transaction ID", "Order ID", "UTR", "PG ID",
+		            "Amount", "Charges", "GST Charges", "Total Charges", "Final Amount",
+		            "Status", "Status Code", "Refund Status", "Settlement Status",
+		            "Current Balance", "Updated Balance",
+		            "Transaction Time", "Created Date", "Updated Date"
+		    };
+
+		    Row header = sheet.createRow(0);
+		    for (int i = 0; i < columns.length; i++) {
+		        header.createCell(i).setCellValue(columns[i]);
+		    }
+
+		    /* ================= DATA ================= */
+
+		    DateTimeFormatter formatter =
+		            DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a");
+
+		    int rowNum = 1;
+		    for (Map<String, Object> r : records) {
+
+		        Row row = sheet.createRow(rowNum++);
+		        int c = 0;
+
+		        row.createCell(c++).setCellValue(nvl(r.get("user_id")));
+		        row.createCell(c++).setCellValue(nvl(r.get("name")));
+		        row.createCell(c++).setCellValue(nvl(r.get("email")));
+		        row.createCell(c++).setCellValue(nvl(r.get("mobile")));
+		        row.createCell(c++).setCellValue(nvl(r.get("address")));
+
+		        row.createCell(c++).setCellValue(nvl(r.get("trxnid")));
+		        row.createCell(c++).setCellValue(nvl(r.get("order_id")));
+		        row.createCell(c++).setCellValue(nvl(r.get("utr")));
+		        row.createCell(c++).setCellValue(nvl(r.get("pg_id")));
+
+//		        row.createCell(c++).setCellValue(nvl(r.get("payment_method")));
+//		        row.createCell(c++).setCellValue(nvl(r.get("transfer_mode")));
+//		        row.createCell(c++).setCellValue(nvl(r.get("ifsc")));
+
+		        row.createCell(c++).setCellValue(nvlDouble(r.get("amount")));
+		        row.createCell(c++).setCellValue(nvlDouble(r.get("charges")));
+		        row.createCell(c++).setCellValue(nvlDouble(r.get("gst_charges")));
+		        row.createCell(c++).setCellValue(nvlDouble(r.get("total_charges")));
+		        row.createCell(c++).setCellValue(nvlDouble(r.get("final_amount")));
+
+		        row.createCell(c++).setCellValue(nvl(r.get("status")));
+		        row.createCell(c++).setCellValue(nvl(r.get("status_code")));
+		        row.createCell(c++).setCellValue(nvl(r.get("refund_status")));
+		        row.createCell(c++).setCellValue(nvl(r.get("settlement_status")));
+
+		        row.createCell(c++).setCellValue(nvlDouble(r.get("current_balance")));
+		        row.createCell(c++).setCellValue(nvlDouble(r.get("updated_balance")));
+
+		        row.createCell(c++).setCellValue(nvl(r.get("time_stamp")));
+		        row.createCell(c++).setCellValue(formatDate(r.get("created_date"), formatter));
+		        row.createCell(c++).setCellValue(formatDate(r.get("updated_date"), formatter));
+		    }
+
+		    for (int i = 0; i < columns.length; i++) {
+		        sheet.autoSizeColumn(i);
+		    }
+
+		    ByteArrayOutputStream out = new ByteArrayOutputStream();
+		    workbook.write(out);
+		    workbook.close();
+
+		    HttpHeaders headers = new HttpHeaders();
+		    headers.setContentType(
+		            MediaType.parseMediaType(
+		                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+		            )
+		    );
+		    headers.setContentDisposition(
+		            ContentDisposition.attachment()
+		                    .filename("admin-payin-report.xlsx")
+		                    .build()
+		    );
+
+		    return ResponseEntity.ok()
+		            .headers(headers)
+		            .body(out.toByteArray());
+		}
+
+
+		
+	
+		private String nvl(Object val) {
+		    return val != null ? String.valueOf(val) : "-";
+		}
+
+		private double nvlDouble(Object val) {
+		    return val != null ? Double.parseDouble(val.toString()) : 0.0;
+		}
+
+		private String formatDate(Object val, DateTimeFormatter formatter) {
+		    if (val == null) return "-";
+
+		    if (val instanceof LocalDateTime ldt) {
+		        return ldt.format(formatter);
+		    }
+
+		    if (val instanceof java.sql.Timestamp ts) {
+		        return ts.toLocalDateTime().format(formatter);
+		    }
+
+		    return val.toString(); // fallback (never crashes)
+		}
+
+
+		private String normalize(String val) {
+		    return (val == null || val.trim().isEmpty()) ? null : val.trim();
+		}
 
 	
 

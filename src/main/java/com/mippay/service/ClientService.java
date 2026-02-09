@@ -177,4 +177,7 @@ public interface ClientService {
     ResponseEntity<?> settlementListByClientId(String clientId);
 
 //    ResponseEntity<?> buckBoxPayin(PayinRecords data) throws Exception;
+    
+    ResponseEntity<?> downloadPayinReportsExcel(String userId, String status, String paymentMethod, LocalDate fromDate,
+			LocalDate toDate) throws Exception;
 }

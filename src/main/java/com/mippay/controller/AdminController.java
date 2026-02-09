@@ -1078,4 +1078,36 @@ public class AdminController {
         ResponseEntity<?> response = this.clientService.settlementListByClientId(clientId);
         return response;
     }
+    
+    @GetMapping("/payinReport/excel")
+    public ResponseEntity<?> downloadAdminPayinReportExcel(
+            @RequestParam(required = false) String merchantId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String orderId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
+    ) {
+        try {
+            log.info(
+                "ADMIN PAYIN EXCEL | merchantId={}, status={}, txnId={}, fromDate={}, toDate={}",
+                merchantId, status, orderId, fromDate, toDate
+            );
+
+            if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "fromDate cannot be after toDate"));
+            }
+
+            return reportService.downloadAdminPayinReportExcel(
+                    merchantId, status, orderId, fromDate, toDate
+            );
+
+        } catch (Exception e) {
+            log.error("Admin payin excel download failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to download admin payin report"));
+        }
+    }
 }

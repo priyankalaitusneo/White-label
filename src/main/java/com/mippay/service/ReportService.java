@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 
 import com.mippay.dto.Admin.PipesReportDTO;
 
@@ -48,6 +49,7 @@ public interface ReportService {
 			LocalDate toDate, int page, int size);
 
 	
-    
+	 ResponseEntity<?> downloadAdminPayinReportExcel(String merchantId, String status, String orderId, LocalDate fromDate,
+				LocalDate toDate) throws Exception;
 
 }
