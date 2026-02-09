@@ -230,7 +230,7 @@ public interface SettlementRecordRepository extends JpaRepository<SettlementReco
     Double getTotalSettledAmount(@Param("userId") String userId);
 
     /**
-     * Get settlement count by status
+     * Get settlement count by statu        s
      */
     @Query("SELECT s.status, COUNT(s) FROM SettlementRecord s GROUP BY s.status")
     List<Object[]> getSettlementCountByStatus();
