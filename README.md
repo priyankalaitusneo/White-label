@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Whitelabel-Backend
+=======
+# MipPay
+>>>>>>> 7edcf1bf4ad7e752ec1a498bf36f79de6e9da126
 
 
 
@@ -15,14 +19,22 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
+<<<<<<< HEAD
 git remote add origin https://gitlab.com/whitelabel-laitusneo/whitelabel-backend.git
+=======
+git remote add origin https://gitlab.com/mippay/mippay.git
+>>>>>>> 7edcf1bf4ad7e752ec1a498bf36f79de6e9da126
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
+<<<<<<< HEAD
 * [Set up project integrations](https://gitlab.com/whitelabel-laitusneo/whitelabel-backend/-/settings/integrations)
+=======
+* [Set up project integrations](https://gitlab.com/mippay/mippay/-/settings/integrations)
+>>>>>>> 7edcf1bf4ad7e752ec1a498bf36f79de6e9da126
 
 ## Collaborate with your team
 
