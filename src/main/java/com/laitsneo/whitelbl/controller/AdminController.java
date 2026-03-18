@@ -31,6 +31,7 @@ import com.laitsneo.whitelbl.dto.Client.WalletDetailResponseDTO;
 import com.laitsneo.whitelbl.entity.Admin.AdminRole;
 import com.laitsneo.whitelbl.entity.Admin.Charges;
 import com.laitsneo.whitelbl.entity.Admin.Role;
+import com.laitsneo.whitelbl.entity.Admin.SettlementRuleRequest;
 import com.laitsneo.whitelbl.entity.Client.Client;
 import com.laitsneo.whitelbl.entity.Client.IpAddress;
 import com.laitsneo.whitelbl.entity.Client.LienAmount;
@@ -49,6 +50,7 @@ import com.laitsneo.whitelbl.service.RoleService;
 import com.laitsneo.whitelbl.service.TrexoService;
 import com.laitsneo.whitelbl.service.WalletService;
 import com.laitsneo.whitelbl.serviceImpl.Admin.AdminServiceImpl;
+import com.laitsneo.whitelbl.serviceImpl.Admin.AutoSettlementService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -100,6 +102,10 @@ public class AdminController {
 
 	@Autowired
     private  WalletService walletService;
+	
+	
+	@Autowired
+	private AutoSettlementService autoSettlementService;
 	
 	@Autowired
 	private LockedFundsService lockedFundsService;
@@ -1145,6 +1151,32 @@ public class AdminController {
 
 	     return adminService.updateClientByAdmin(userId, dto);
 	 }
+	 
+	 
+	 @PostMapping("/settlementRule")
+		public ResponseEntity<?> settlementRule(@RequestBody @Valid SettlementRuleRequest request) {
+			logger.info("POST /admin/settlement-rule/create → Request: userId={}, slotType={}, timeSlots={}",
+					request.getUserId(), request.getSlotType(), request.getTimeSlots());
+			ResponseEntity<?> response = adminService.createRule(request);
+			logger.info("POST /admin/settlement-rule/create → Response Status: {}", response.getStatusCode());
+			return response;
+		}
 
+		@GetMapping("/settlementList")
+		public ResponseEntity<?> list() {
+			logger.info("GET /admin/settlement-rule/list → Request");
+			ResponseEntity<?> response = adminService.getAllRules();
+			logger.info("GET /admin/settlement-rule/list → Response Status: {}", response.getStatusCode());
+			return response;
+		}
+
+
+		@GetMapping("/run-settlement")
+		public ResponseEntity<?> runSettlement() {
+
+			autoSettlementService.runAutoSettlement();
+
+			return ResponseEntity.ok("Settlement cron executed manually");
+		}
 
 }

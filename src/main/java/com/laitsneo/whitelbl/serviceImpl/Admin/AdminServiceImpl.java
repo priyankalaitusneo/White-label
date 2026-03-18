@@ -11,6 +11,9 @@ import com.laitsneo.whitelbl.dto.Client.ClientResponseDto;
 import com.laitsneo.whitelbl.dto.Client.ResponseDto;
 import com.laitsneo.whitelbl.entity.Admin.Charges;
 import com.laitsneo.whitelbl.entity.Admin.PayInCharges;
+import com.laitsneo.whitelbl.entity.Admin.SettlementRule;
+import com.laitsneo.whitelbl.entity.Admin.SettlementRuleRequest;
+import com.laitsneo.whitelbl.entity.Admin.SettlementRuleSlot;
 import com.laitsneo.whitelbl.entity.Admin.User;
 import com.laitsneo.whitelbl.entity.Admin.Vendors;
 import com.laitsneo.whitelbl.entity.Client.*;
@@ -20,12 +23,14 @@ import com.laitsneo.whitelbl.exception.CustomMethodArgumentNotValidException;
 import com.laitsneo.whitelbl.helper.Generator;
 import com.laitsneo.whitelbl.repository.Admin.ChargesRepository;
 import com.laitsneo.whitelbl.repository.Admin.PayInChargesRepository;
+import com.laitsneo.whitelbl.repository.Admin.SettlementRuleRepository;
 import com.laitsneo.whitelbl.repository.Admin.UserRepository;
 import com.laitsneo.whitelbl.repository.Admin.VendorsRepository;
 import com.laitsneo.whitelbl.repository.Client.*;
 import com.laitsneo.whitelbl.response.PayInChargesResponseDto;
 import com.laitsneo.whitelbl.service.AdminService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
 import org.slf4j.Logger;
@@ -44,6 +49,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -87,6 +93,18 @@ public class AdminServiceImpl implements AdminService {
 	
 	@Autowired
 	private VendorsRepository vendorsRepository;
+	
+	 @Autowired
+	    private SettlementRuleRepository ruleRepository;
+	 
+	 
+	  @Autowired
+	    private SettlementRuleSlotRepository slotRepository;
+	 
+	 
+	 private boolean isManualSlotType(String slotType) {
+	        return slotType.contains("Same Day") || slotType.contains("Manual");
+	    }
 
 	@Override
 	public String createAdmin(User request) {
@@ -1762,6 +1780,47 @@ public class AdminServiceImpl implements AdminService {
 
 	
 
+    @Transactional
+    public ResponseEntity<?> createRule(SettlementRuleRequest request) {
+        logger.info("Attempting to create settlement rule for userId: {}", request.getUserId());
+        if (ruleRepository.findByUserId(request.getUserId()).isPresent()) {
+            logger.warn("Settlement rule already exists for userId: {}", request.getUserId());
+            return ResponseEntity.badRequest().body(ResponseDto.builder().status("BAD_REQUEST")
+                    .message("Settlement rule already exists for this user").build());
+        }
+        SettlementRule rule = new SettlementRule();
+        rule.setUserId(request.getUserId());
+        rule.setSlotType(request.getSlotType());
+        rule.setActive(true);
+        rule.setCreatedAt(LocalDateTime.now());
+        ruleRepository.save(rule);
+        logger.info("Created settlement rule with id: {} for userId: {}", rule.getId(), request.getUserId());
+        if (isManualSlotType(request.getSlotType())) {
+            if (request.getTimeSlots() == null || request.getTimeSlots().isEmpty()) {
+                logger.error("Time slots missing for manual slot type: {} userId: {}", request.getSlotType(),
+                        request.getUserId());
+                return ResponseEntity.badRequest().body(ResponseDto.builder().status("BAD_REQUEST")
+                        .message("Time slots required for selected slot type").build());
+            }
+            for (String time : request.getTimeSlots()) {
+                SettlementRuleSlot slot = new SettlementRuleSlot();
+                slot.setRuleId(rule.getId());
+                slot.setTimeSlot(LocalTime.parse(time));
+                slotRepository.save(slot);
+                logger.debug("Saved time slot {} for rule id {}", time, rule.getId());
+            }
+        }
+        logger.info("Settlement rule creation completed successfully for userId: {}", request.getUserId());
+        return ResponseEntity.ok(
+                ResponseDto.builder().status("OK").message("Settlement Rule Created Successfully").data(rule).build());
+    }
+
+    public ResponseEntity<?> getAllRules() {
+        logger.info("Fetching all settlement rules");
+        List<SettlementRule> rules = ruleRepository.findAll();
+        logger.info("Fetched {} settlement rules", rules.size());
+        return ResponseEntity.ok(ResponseDto.builder().status("OK").message("Rule List").data(rules).build());
+    }
 
 
 	

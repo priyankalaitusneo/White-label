@@ -9,6 +9,9 @@ import org.springframework.stereotype.Repository;
 
 import com.laitsneo.whitelbl.entity.Client.PayinRecords;
 
+import jakarta.transaction.Transactional;
+
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -318,5 +321,51 @@ public interface PayinRecordRepository extends JpaRepository<PayinRecords, Integ
 		    nativeQuery = true
 		)
 	Page<PayinRecords> findByClientIdWithPagination(String clientId, Pageable pageable);
+	
+	
+	
+	@Query(value = """
+		    SELECT DISTINCT user_id
+		    FROM payin_records
+		    WHERE created_date >= :from
+		      AND created_date <= :to
+		""", nativeQuery = true)
+		List<String> findDistinctUserIds(
+		        @Param("from") java.sql.Timestamp from,
+		        @Param("to") java.sql.Timestamp to
+		);
+	
+	
 
+	@Modifying
+	@Transactional
+	@Query(value = """
+	    UPDATE payin_records
+	    SET settlement_status = 'SETTLED'
+	    WHERE user_id = :userId
+	      AND status = 'SUCCESS'
+	      AND settlement_status = 'UNSETTLED'
+	      AND created_date >= :from
+	      AND created_date <= :to
+	""", nativeQuery = true)
+	int markSettled(
+	        @Param("userId") String userId,
+	        @Param("from") String from,
+	        @Param("to") String to
+	);
+
+	@Query(value = """
+		    SELECT COALESCE(SUM(amount), 0)
+		    FROM payin_records
+		    WHERE user_id = :userId
+		      AND created_date >= :from
+		      AND created_date <= :to
+		      AND status = 'SUCCESS'
+		      AND settlement_status = 'UNSETTLED'
+		""", nativeQuery = true)
+		Double getTotalUnsettledAmount(
+		        @Param("userId") String userId,
+		        @Param("from") String from,
+		        @Param("to") String to
+		);
 }

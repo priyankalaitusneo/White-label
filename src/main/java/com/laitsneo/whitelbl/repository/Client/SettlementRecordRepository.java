@@ -291,5 +291,7 @@ public interface SettlementRecordRepository extends JpaRepository<SettlementReco
     	        @Param("fromDate") LocalDateTime fromDate,
     	        @Param("toDate") LocalDateTime toDate
     	    );
+    	    
+    	    boolean existsByUserIdAndFromDateAndToDate(String userId, LocalDate fromDate, LocalDate toDate);
     		
 }

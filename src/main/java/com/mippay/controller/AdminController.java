@@ -1,5 +1,6 @@
 package com.mippay.controller;
 
+import com.laitsneo.whitelbl.serviceImpl.Admin.AutoSettlementService;
 import com.mippay.dto.Admin.AssignRoleRequestDto;
 import com.mippay.dto.Admin.CollectionHistoryDto;
 import com.mippay.dto.Admin.PayInChargesRequestDto;
@@ -87,6 +88,9 @@ public class AdminController {
 
 	@Autowired
     private  WalletService walletService;
+	
+	@Autowired
+	private AutoSettlementService autoSettlementService;
 	
 	@Autowired
 	private LockedFundsService lockedFundsService;
@@ -1110,4 +1114,31 @@ public class AdminController {
                     .body(Map.of("error", "Failed to download admin payin report"));
         }
     }
+    
+//    @PostMapping("/settlementRule")
+//	public ResponseEntity<?> settlementRule(@RequestBody @Valid SettlementRuleRequest request) {
+//		logger.info("POST /admin/settlement-rule/create → Request: userId={}, slotType={}, timeSlots={}",
+//				request.getUserId(), request.getSlotType(), request.getTimeSlots());
+//		ResponseEntity<?> response = adminService.createRule(request);
+//		logger.info("POST /admin/settlement-rule/create → Response Status: {}", response.getStatusCode());
+//		return response;
+//	}
+//
+//	@GetMapping("/settlementList")
+//	public ResponseEntity<?> list() {
+//		logger.info("GET /admin/settlement-rule/list → Request");
+//		ResponseEntity<?> response = adminService.getAllRules();
+//		logger.info("GET /admin/settlement-rule/list → Response Status: {}", response.getStatusCode());
+//		return response;
+//	}
+
+	
+
+	@GetMapping("/run-settlement")
+	public ResponseEntity<?> runSettlement() {
+
+		autoSettlementService.runAutoSettlement();
+
+		return ResponseEntity.ok("Settlement cron executed manually");
+	}
 }
