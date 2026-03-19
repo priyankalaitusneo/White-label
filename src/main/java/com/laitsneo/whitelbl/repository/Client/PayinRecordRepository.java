@@ -323,46 +323,55 @@ public interface PayinRecordRepository extends JpaRepository<PayinRecords, Integ
 	Page<PayinRecords> findByClientIdWithPagination(String clientId, Pageable pageable);
 	
 	
+	// ========== SETTLEMENT QUERIES ==========
 	
-	@Query(value = """
-		    SELECT DISTINCT user_id
-		    FROM payin_records
-		    WHERE created_date >= :from
-		      AND created_date <= :to
-		""", nativeQuery = true)
+		/**
+		 * Find all distinct user IDs who have transactions in the given time period
+		 * Used by auto settlement to identify which users need settlement
+		 */
+		@Query(value = """
+			    SELECT DISTINCT user_id
+			    FROM payin_records
+			    WHERE created_date >= :from
+			      AND created_date <= :to
+			      AND status = 'SUCCESS'
+			""", nativeQuery = true)
 		List<String> findDistinctUserIds(
-		        @Param("from") java.sql.Timestamp from,
-		        @Param("to") java.sql.Timestamp to
+		        @Param("from") Timestamp from,
+		        @Param("to") Timestamp to
 		);
-	
-	
-
-	@Modifying
-	@Transactional
-	@Query(value = """
-	    UPDATE payin_records
-	    SET settlement_status = 'SETTLED'
-	    WHERE user_id = :userId
-	      AND status = 'SUCCESS'
-	      AND settlement_status = 'UNSETTLED'
-	      AND created_date >= :from
-	      AND created_date <= :to
-	""", nativeQuery = true)
-	int markSettled(
-	        @Param("userId") String userId,
-	        @Param("from") String from,
-	        @Param("to") String to
-	);
-
-	@Query(value = """
-		    SELECT COALESCE(SUM(amount), 0)
-		    FROM payin_records
+		
+		@Modifying
+		@Transactional
+		@Query(value = """
+		    UPDATE payin_records
+		    SET settlement_status = 'SETTLED',
+		        updated_date = NOW()           // ✅ Updates timestamp
 		    WHERE user_id = :userId
+		      AND status = 'SUCCESS'
+		      AND (settlement_status = 'UNSETTLED' OR settlement_status IS NULL)  // ✅ Handles NULL
 		      AND created_date >= :from
 		      AND created_date <= :to
-		      AND status = 'SUCCESS'
-		      AND settlement_status = 'UNSETTLED'
 		""", nativeQuery = true)
+		int markSettled(
+		    @Param("userId") String userId,
+		    @Param("from") String from,        // ✅ Still String for compatibility
+		    @Param("to") String to
+		);
+	 
+		/**
+		 * Get total unsettled amount for a user in a specific date range
+		 * Only counts SUCCESS transactions that are UNSETTLED
+		 */
+		@Query(value = """
+			    SELECT COALESCE(SUM(COALESCE(final_amount, amount)), 0)
+			    FROM payin_records
+			    WHERE user_id = :userId
+			      AND created_date >= :from
+			      AND created_date <= :to
+			      AND status = 'SUCCESS'
+			      AND (settlement_status = 'UNSETTLED' OR settlement_status IS NULL)
+			""", nativeQuery = true)
 		Double getTotalUnsettledAmount(
 		        @Param("userId") String userId,
 		        @Param("from") String from,

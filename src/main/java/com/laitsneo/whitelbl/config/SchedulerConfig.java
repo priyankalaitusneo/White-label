@@ -5,7 +5,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 
 @Configuration
-@EnableScheduling
+@EnableScheduling  // ← Must be present
 public class SchedulerConfig {
    
 	// Scheduling is now enabled for the application
