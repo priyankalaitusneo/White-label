@@ -434,66 +434,34 @@ public class ReportServiceImpl implements ReportService {
 	
 	// Settllemts Reports
 
-	@Override
-	public List<AdminSettlementReportResponseDTO> getSettlementReportAdmin(String merchantId, String status,
-			String pipe, LocalDateTime fromDate, LocalDateTime toDate) {
-		// TODO Auto-generated method stub
-	        
-	        try {
-	            log.info("Fetching settlement report - merchantId: {}, status: {}, pipe: {}, fromDate: {}, toDate: {}",
-	                    merchantId, status, pipe, fromDate, toDate);
+//	@Override
+//	public List<AdminSettlementReportResponseDTO> getSettlementReportAdmin(String merchantId, String status,
+//			String pipe, LocalDateTime fromDate, LocalDateTime toDate) {
+//		// TODO Auto-generated method stub
+//	        
+//	        try {
+//	            log.info("Fetching settlement report - merchantId: {}, status: {}, pipe: {}, fromDate: {}, toDate: {}",
+//	                    merchantId, status, pipe, fromDate, toDate);
+//
+//	            // Call the new repository query
+//	            List<Object[]> results = settlementRecordRepository.getSettlementReportData(
+//	                    merchantId, status, pipe, fromDate, toDate);
+//
+//	            // Map to DTO
+//	            List<AdminSettlementReportResponseDTO> reports = results.stream()
+//	                    .map(this::mapToSettlementReportAdminDTO)
+//	                    .collect(Collectors.toList());
+//
+//	            log.info("Successfully fetched {} settlement records", reports.size());
+//	            return reports;
+//
+//	        } catch (Exception e) {
+//	            log.error("Error in getSettlementReport: {}", e.getMessage(), e);
+//	            throw new RuntimeException("Failed to fetch settlement report", e);
+//	        }
+//	    }
 
-	            // Call the new repository query
-	            List<Object[]> results = settlementRecordRepository.getSettlementReportData(
-	                    merchantId, status, pipe, fromDate, toDate);
-
-	            // Map to DTO
-	            List<AdminSettlementReportResponseDTO> reports = results.stream()
-	                    .map(this::mapToSettlementReportAdminDTO)
-	                    .collect(Collectors.toList());
-
-	            log.info("Successfully fetched {} settlement records", reports.size());
-	            return reports;
-
-	        } catch (Exception e) {
-	            log.error("Error in getSettlementReport: {}", e.getMessage(), e);
-	            throw new RuntimeException("Failed to fetch settlement report", e);
-	        }
-	    }
-
-	    /**
-	     * Map Object[] to AdminSettlementReportResponseDTO
-	     */
-	    private AdminSettlementReportResponseDTO mapToSettlementReportAdminDTO(Object[] row) {
-	        String settlementId = (String) row[0];
-	        String merchantName = (String) row[1];
-	        Double settlementAmount = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
-	        LocalDateTime actualSettlementDate = row[3] != null ? (LocalDateTime) row[3] : null;
-	        String toBankName = (String) row[4];
-	        String settlementStatus = (String) row[5];
-	        String settlementMethod = (String) row[6];
-	        String utrNumber = (String) row[7];
-	        
-	        // For WALLET settlements, show "Wallet" as bank name
-	        String bankName = toBankName;
-	        if ("WALLET".equalsIgnoreCase(settlementMethod)) {
-	            bankName = "Wallet";
-	        } else if (toBankName == null || toBankName.trim().isEmpty()) {
-	            bankName = "-";
-	        }
-	        
-	        return AdminSettlementReportResponseDTO.builder()
-	                .settlementId(settlementId)
-	                .merchantName(merchantName)
-	                .amount(settlementAmount)
-	                .settlementDate(actualSettlementDate)
-	                .bankName(bankName)
-	                .status(settlementStatus)
-	                .method(settlementMethod)
-	                .utr(utrNumber)
-	                .build();
-	    }
-
+	   
 
 		@Override
 		public Map<String, Object> getPayoutReport(String merchantId, String status, String txnId, LocalDate fromDate,
@@ -503,10 +471,63 @@ public class ReportServiceImpl implements ReportService {
 		}
 
 
+		@Override
+		public Map<String, Object> getSettlementReportAdminCount(String merchantId, String status, String pipe,
+				LocalDateTime fromDate, LocalDateTime toDate) {
+		
+
+			    try {
+			        log.info("Fetching settlement report");
+
+			        List<Object[]> results = payinRecordRepository.getSettlementReportData(
+			                merchantId);
+
+			        List<AdminSettlementReportResponseDTO> reports = results.stream()
+			                .map(this::mapToDTO)
+			                .collect(Collectors.toList());
+
+			        // ✅ total success count
+			        long totalSuccessCount = reports.stream()
+			                .mapToLong(AdminSettlementReportResponseDTO::getSuccessCount)
+			                .sum();
+
+			        Map<String, Object> response = new HashMap<>();
+			        response.put("success", true);
+			        response.put("data", reports);
+			        response.put("count", reports.size());
+			        response.put("totalSuccessCount", totalSuccessCount);
+			        System.out.println(response+"----------------");
+			        return response;
+
+			    } catch (Exception e) {
+			        log.error("Error in report service", e);
+			        throw new RuntimeException("Failed to fetch settlement report");
+			    }
+			}
+
+
 		
 	
+		private AdminSettlementReportResponseDTO mapToDTO(Object[] row) {
 
-	
+		    return AdminSettlementReportResponseDTO.builder()
+		            .userId((String) row[0])
+		            .name((String) row[1])
+		            .email((String) row[2])
+		            .mobile((String) row[3])
+
+		            .totalCharges(row[4] != null ? ((Number) row[4]).doubleValue() : 0.0)
+		            .totalGstCharges(row[5] != null ? ((Number) row[5]).doubleValue() : 0.0)
+		            .totalFinalAmount(row[6] != null ? ((Number) row[6]).doubleValue() : 0.0)
+
+		            .successCount(row[7] != null ? ((Number) row[7]).longValue() : 0L)
+		            .lastTransactionDate((LocalDateTime) row[8])
+
+		            .build();
+		}
+		
+
+		
 
 }
 

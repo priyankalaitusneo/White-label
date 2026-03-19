@@ -39,8 +39,8 @@ public interface ReportService {
     LocalDateTime toDate
 );
 
-	List<AdminSettlementReportResponseDTO> getSettlementReportAdmin(String merchantId, String status, String pipe,
-			LocalDateTime fromDate, LocalDateTime toDate);
+//	List<AdminSettlementReportResponseDTO> getSettlementReportAdmin(String merchantId, String status, String pipe,
+//			LocalDateTime fromDate, LocalDateTime toDate);
 
 	 Map<String, Object> getPayinReport(String merchantId, String status, String txnId, LocalDate fromDate,
 			LocalDate toDate, int page, int size);
@@ -50,6 +50,9 @@ public interface ReportService {
 
 	 Map<String, Object> getPayoutReport(String merchantId, String status, String txnId, LocalDate fromDate,
 			LocalDate toDate, int page, int size);
+
+	 Map<String, Object> getSettlementReportAdminCount(String merchantId, String status, String pipe,
+			LocalDateTime fromDate, LocalDateTime toDate);
 
 	
     

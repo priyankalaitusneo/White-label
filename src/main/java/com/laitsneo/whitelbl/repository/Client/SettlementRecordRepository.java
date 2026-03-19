@@ -268,30 +268,77 @@ public interface SettlementRecordRepository extends JpaRepository<SettlementReco
     		);
 
    // Setllements Reports 
-    		/**
-    	     * Get Settlement Report with filters - NEW QUERY FOR REPORTS
-    	     * Shows: Settlement ID, Merchant Name, Amount, Settlement Date, Bank Name, Status
-    	     */
-    	    @Query("""
-    	        SELECT s.settlementId, s.merchantName, s.settlementAmount, s.actualSettlementDate,
-    	               s.toBankName, s.settlementStatus, s.settlementMethod, s.utrNumber
-    	        FROM SettlementRecord s
-    	        WHERE (:merchantId IS NULL OR s.userId = :merchantId)
-    	        AND (:status IS NULL OR s.settlementStatus = :status)
-    	        AND (:pipe IS NULL OR LOWER(s.toBankName) LIKE LOWER(CONCAT('%', :pipe, '%')))
-    	        AND (:fromDate IS NULL OR s.actualSettlementDate >= :fromDate)
-    	        AND (:toDate IS NULL OR s.actualSettlementDate <= :toDate)
-    	        AND s.actualSettlementDate IS NOT NULL
-    	        ORDER BY s.actualSettlementDate DESC
-    	    """)
-    	    List<Object[]> getSettlementReportData(
-    	        @Param("merchantId") String merchantId,
-    	        @Param("status") String status,
-    	        @Param("pipe") String pipe,
-    	        @Param("fromDate") LocalDateTime fromDate,
-    	        @Param("toDate") LocalDateTime toDate
-    	    );
-    	    
+//    		/**
+//    	     * Get Settlement Report with filters - NEW QUERY FOR REPORTS
+//    	     * Shows: Settlement ID, Merchant Name, Amount, Settlement Date, Bank Name, Status
+//    	     */
+//    	    @Query("""
+//    	        SELECT s.settlementId, s.merchantName, s.settlementAmount, s.actualSettlementDate,
+//    	               s.toBankName, s.settlementStatus, s.settlementMethod, s.utrNumber
+//    	        FROM SettlementRecord s
+//    	        WHERE (:merchantId IS NULL OR s.userId = :merchantId)
+//    	        AND (:status IS NULL OR s.settlementStatus = :status)
+//    	        AND (:pipe IS NULL OR LOWER(s.toBankName) LIKE LOWER(CONCAT('%', :pipe, '%')))
+//    	        AND (:fromDate IS NULL OR s.actualSettlementDate >= :fromDate)
+//    	        AND (:toDate IS NULL OR s.actualSettlementDate <= :toDate)
+//    	        AND s.actualSettlementDate IS NOT NULL
+//    	        ORDER BY s.actualSettlementDate DESC
+//    	    """)
+//    	    List<Object[]> getSettlementReportData(
+//    	        @Param("merchantId") String merchantId,
+//    	        @Param("status") String status,
+//    	        @Param("pipe") String pipe,
+//    	        @Param("fromDate") LocalDateTime fromDate,
+//    	        @Param("toDate") LocalDateTime toDate
+//    	    );
+//    	    
+    		@Query(value = """
+    			    SELECT 
+    			        p.user_id,
+    			        p.name,
+    			        p.email,
+    			        p.mobile,
+
+    			        COALESCE(SUM(p.charges), 0) AS totalCharges,
+    			        COALESCE(SUM(p.gst_charges), 0) AS totalGstCharges,
+    			        COALESCE(SUM(p.final_amount), 0) AS totalFinalAmount,
+
+    			        COUNT(CASE WHEN p.status = 'SUCCESS' THEN 1 END) AS successCount,
+
+    			        MAX(p.created_date) AS lastTransactionDate,
+
+    			        s.settlement_id,
+    			        s.settlement_status,
+    			        s.actual_settlement_date,
+    			        s.to_bank_name
+
+    			    FROM payin_records p
+    			    LEFT JOIN settlement_records s 
+    			        ON p.user_id = s.user_id
+
+    			    WHERE (:merchantId IS NULL OR p.user_id = :merchantId)
+    			    AND (:status IS NULL OR p.status = :status)
+    			    AND (:fromDate IS NULL OR p.created_date >= :fromDate)
+    			    AND (:toDate IS NULL OR p.created_date <= :toDate)
+
+    			    GROUP BY 
+    			        p.user_id,
+    			        p.name,
+    			        p.email,
+    			        p.mobile,
+    			        s.settlement_id,
+    			        s.settlement_status,
+    			        s.actual_settlement_date,
+    			        s.to_bank_name
+
+    			    ORDER BY MAX(p.created_date) DESC
+    			""", nativeQuery = true)
+    			List<Object[]> getSettlementReportData(
+    			        @Param("merchantId") String merchantId,
+    			        @Param("status") String status,
+    			        @Param("fromDate") LocalDateTime fromDate,
+    			        @Param("toDate") LocalDateTime toDate
+    			);
     	    boolean existsByUserIdAndFromDateAndToDate(String userId, LocalDate fromDate, LocalDate toDate);
     		
 }

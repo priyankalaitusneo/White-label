@@ -355,7 +355,7 @@ public interface PayinRecordRepository extends JpaRepository<PayinRecords, Integ
 		""", nativeQuery = true)
 		int markSettled(
 		    @Param("userId") String userId,
-		    @Param("from") String from,        // ✅ Still String for compatibility
+		    @Param("from") String from,       
 		    @Param("to") String to
 		);
 	 
@@ -377,4 +377,28 @@ public interface PayinRecordRepository extends JpaRepository<PayinRecords, Integ
 		        @Param("from") String from,
 		        @Param("to") String to
 		);
+		
+		
+		@Query(value = """
+			    SELECT 
+			        p.user_id,
+			        p.name,
+
+			        SUM(p.charges) AS totalCharges,
+			        SUM(p.gst_charges) AS totalGstCharges,
+			        SUM(p.final_amount) AS totalFinalAmount,
+
+			        SUM(CASE WHEN p.status = 'SUCCESS' THEN 1 ELSE 0 END) AS successCount,
+
+			        MAX(p.created_date) AS lastTransactionDate
+
+			    FROM payin_records p
+
+			    WHERE (:merchantId IS NULL OR p.user_id = :merchantId)
+
+			    GROUP BY p.user_id, p.name
+			""", nativeQuery = true)
+			List<Object[]> getSettlementReportData(
+			        @Param("merchantId") String merchantId
+			);
 }

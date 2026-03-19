@@ -1032,60 +1032,105 @@ public class AdminController {
 // Settlemets  Reports
 	 
 	
-	 @GetMapping("/settlementReport")
-	    public ResponseEntity<?> getSettlementReport(
-	            @RequestParam(required = false) String merchantId,
-	            @RequestParam(required = false) String status,
-	            @RequestParam(required = false) String pipe,
-	            @RequestParam(required = false) 
-	            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
-	            @RequestParam(required = false) 
-	            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate) {
-	        
-	        try {
-	            log.info("GET /settlementReport → merchantId: {}, status: {}, pipe: {}, fromDate: {}, toDate: {}",
-	                    merchantId, status, pipe, fromDate, toDate);
+//	 @GetMapping("/settlementReport")
+//	    public ResponseEntity<?> getSettlementReport(
+//	            @RequestParam(required = false) String merchantId,
+//	            @RequestParam(required = false) String status,
+//	            @RequestParam(required = false) String pipe,
+//	            @RequestParam(required = false) 
+//	            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+//	            @RequestParam(required = false) 
+//	            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate) {
+//	        
+//	        try {
+//	            log.info("GET /settlementReport → merchantId: {}, status: {}, pipe: {}, fromDate: {}, toDate: {}",
+//	                    merchantId, status, pipe, fromDate, toDate);
+//
+//	            // Validate date range
+//	            if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+//	                log.error("Invalid date range: fromDate {} is after toDate {}", fromDate, toDate);
+//	                return ResponseEntity.badRequest().body(
+//	                    Map.of("success", false, "error", "fromDate cannot be after toDate")
+//	                );
+//	            }
+//
+//	            // Validate status if provided
+//	            if (status != null && !status.isEmpty()) {
+//	                List<String> validStatuses = Arrays.asList("PENDING", "COMPLETED", "CANCELLED");
+//	                if (!validStatuses.contains(status.toUpperCase())) {
+//	                    log.error("Invalid status: {}", status);
+//	                    return ResponseEntity.badRequest().body(
+//	                        Map.of("success", false, "error", "Invalid status. Valid values: PENDING, COMPLETED, CANCELLED")
+//	                    );
+//	                }
+//	            }
+//
+//	            // Fetch settlement report
+//	            List<AdminSettlementReportResponseDTO> reports = reportService.getSettlementReportAdmin(
+//	                    merchantId, status, pipe, fromDate, toDate);
+//
+//	            log.info("Successfully fetched {} settlement records", reports.size());
+//	            
+//	            Map<String, Object> response = new HashMap<>();
+//	            response.put("success", true);
+//	            response.put("data", reports);
+//	            response.put("count", reports.size());
+//	            
+//	            return ResponseEntity.ok(response);
+//
+//	        } catch (Exception e) {
+//	            log.error("Error fetching settlement report: {}", e.getMessage(), e);
+//	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+//	                Map.of("success", false, "error", "Failed to fetch settlement report", 
+//	                       "message", e.getMessage())
+//	            );
+//	        }
+//	    }
+	 
+	 
+	 @GetMapping("/settlementReportData")
+	 public ResponseEntity<?> getSettlementReportdata(
+	         @RequestParam(required = false) String merchantId,
+	         @RequestParam(required = false) String status,
+	         @RequestParam(required = false) String pipe,
+	         @RequestParam(required = false) 
+	         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+	         @RequestParam(required = false) 
+	         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate) {
 
-	            // Validate date range
-	            if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
-	                log.error("Invalid date range: fromDate {} is after toDate {}", fromDate, toDate);
-	                return ResponseEntity.badRequest().body(
-	                    Map.of("success", false, "error", "fromDate cannot be after toDate")
-	                );
-	            }
+	     try {
+	         log.info("GET /settlementReport → merchantId: {}, status: {}, pipe: {}, fromDate: {}, toDate: {}",
+	                 merchantId, status, pipe, fromDate, toDate);
 
-	            // Validate status if provided
-	            if (status != null && !status.isEmpty()) {
-	                List<String> validStatuses = Arrays.asList("PENDING", "COMPLETED", "CANCELLED");
-	                if (!validStatuses.contains(status.toUpperCase())) {
-	                    log.error("Invalid status: {}", status);
-	                    return ResponseEntity.badRequest().body(
-	                        Map.of("success", false, "error", "Invalid status. Valid values: PENDING, COMPLETED, CANCELLED")
-	                    );
-	                }
-	            }
+	         // Date validation
+	         if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+	             return ResponseEntity.badRequest().body(
+	                     Map.of("success", false, "error", "fromDate cannot be after toDate")
+	             );
+	         }
 
-	            // Fetch settlement report
-	            List<AdminSettlementReportResponseDTO> reports = reportService.getSettlementReportAdmin(
-	                    merchantId, status, pipe, fromDate, toDate);
+	         // Status validation
+	         if (status != null && !status.isEmpty()) {
+	             List<String> validStatuses = Arrays.asList("PENDING", "COMPLETED", "CANCELLED");
+	             if (!validStatuses.contains(status.toUpperCase())) {
+	                 return ResponseEntity.badRequest().body(
+	                         Map.of("success", false, "error", "Invalid status")
+	                 );
+	             }
+	         }
 
-	            log.info("Successfully fetched {} settlement records", reports.size());
-	            
-	            Map<String, Object> response = new HashMap<>();
-	            response.put("success", true);
-	            response.put("data", reports);
-	            response.put("count", reports.size());
-	            
-	            return ResponseEntity.ok(response);
+	         Map<String, Object> result = reportService.getSettlementReportAdminCount(
+	                 merchantId, status, pipe, fromDate, toDate);
 
-	        } catch (Exception e) {
-	            log.error("Error fetching settlement report: {}", e.getMessage(), e);
-	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-	                Map.of("success", false, "error", "Failed to fetch settlement report", 
-	                       "message", e.getMessage())
-	            );
-	        }
-	    }
+	         return ResponseEntity.ok(result);
+
+	     } catch (Exception e) {
+	         log.error("Error fetching settlement report", e);
+	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+	                 Map.of("success", false, "error", e.getMessage())
+	         );
+	     }
+	 }
 	 
 	 @GetMapping("/transaction-counts/year-month")
 	 public ResponseEntity<?> transactionCountAndAmountYearMonthWise() {
