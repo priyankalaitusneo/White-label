@@ -340,15 +340,15 @@ public class WalletServiceImpl implements WalletService {
                     String merchantId = client.getUserId();
                     
                     // Get total fund (account balance)
-                    BigDecimal totalFund = client.getAccountBal() != null ? 
-                        client.getAccountBal() : BigDecimal.ZERO;
+                    BigDecimal totalFund = client.getWalletBalance() != null ? 
+                        client.getWalletBalance() : BigDecimal.ZERO;
 
                     // Get locked amount for this merchant
                     BigDecimal lockedAmount = lockedFundsRepository.getTotalLockedAmountByUserId(merchantId);
                     if (lockedAmount == null) {
                         lockedAmount = BigDecimal.ZERO;
                     }
-
+System.out.println(totalFund+"-------------------------");
                     // Calculate available balance
                     BigDecimal available = totalFund.subtract(lockedAmount);
 
