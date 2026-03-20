@@ -139,6 +139,8 @@ public interface AdminService {
 	ResponseEntity<?> payoutWebhookList();
 
 	ResponseEntity<?> updateClientByAdmin(String userId, AdminClientUpdateDto  dto);
+
+	ResponseEntity<?> settlementRecords();
 	
 	
 }

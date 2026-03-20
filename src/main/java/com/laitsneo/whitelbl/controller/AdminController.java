@@ -1224,4 +1224,11 @@ public class AdminController {
 			return ResponseEntity.ok("Settlement cron executed manually");
 		}
 
+		@GetMapping("/settlementRecords")
+		public ResponseEntity<?> settlementRecords() {
+			logger.info("GET /settlement-records → Request");
+			ResponseEntity<?> response = adminService.settlementRecords();
+			logger.info("GET /settlement-records → Response Status: {}", response.getStatusCode());
+			return response;
+		}
 }

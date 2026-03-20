@@ -51,6 +51,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,6 +101,9 @@ public class AdminServiceImpl implements AdminService {
 	 
 	  @Autowired
 	    private SettlementRuleSlotRepository slotRepository;
+	  
+	   @Autowired
+	    private SettlementRecordRepository settlementRepository;
 	 
 	 
 	 private boolean isManualSlotType(String slotType) {
@@ -1824,7 +1828,19 @@ public class AdminServiceImpl implements AdminService {
 
 
 	
-
+    @Override
+    public ResponseEntity<?> settlementRecords() {
+        List<SettlementRecord> recodrs = this.settlementRepository.findAll();
+        Collections.reverse(recodrs);
+        if (recodrs.size() > 0) {
+            ResponseDto resonse = ResponseDto.builder().status("OK").message("SUCCESS").data(recodrs).build();
+            return ResponseEntity.ok(resonse);
+        } else {
+            ResponseDto resonse = ResponseDto.builder().status("BAD_REQUEST").message("ERROR")
+                    .data("No records found ..!").build();
+            return ResponseEntity.badRequest().body(resonse);
+        }
+    }
 	
 
 
