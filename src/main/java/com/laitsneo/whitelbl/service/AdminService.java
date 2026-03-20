@@ -140,7 +140,8 @@ public interface AdminService {
 
 	ResponseEntity<?> updateClientByAdmin(String userId, AdminClientUpdateDto  dto);
 
-	ResponseEntity<?> settlementRecords();
+
+	ResponseEntity<?> settlementRecords(int page, int size);
 	
 	
 }

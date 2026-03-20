@@ -1827,18 +1827,37 @@ public class AdminServiceImpl implements AdminService {
     }
 
 
-	
     @Override
-    public ResponseEntity<?> settlementRecords() {
-        List<SettlementRecord> recodrs = this.settlementRepository.findAll();
-        Collections.reverse(recodrs);
-        if (recodrs.size() > 0) {
-            ResponseDto resonse = ResponseDto.builder().status("OK").message("SUCCESS").data(recodrs).build();
-            return ResponseEntity.ok(resonse);
+    public ResponseEntity<?> settlementRecords(int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+
+        Page<SettlementRecord> recordsPage = settlementRepository.findAll(pageable);
+
+        if (recordsPage.hasContent()) {
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("content", recordsPage.getContent());
+            responseData.put("currentPage", recordsPage.getNumber());
+            responseData.put("totalItems", recordsPage.getTotalElements());
+            responseData.put("totalPages", recordsPage.getTotalPages());
+
+            ResponseDto response = ResponseDto.builder()
+                    .status("OK")
+                    .message("SUCCESS")
+                    .data(responseData)
+                    .build();
+
+            return ResponseEntity.ok(response);
+
         } else {
-            ResponseDto resonse = ResponseDto.builder().status("BAD_REQUEST").message("ERROR")
-                    .data("No records found ..!").build();
-            return ResponseEntity.badRequest().body(resonse);
+            ResponseDto response = ResponseDto.builder()
+                    .status("BAD_REQUEST")
+                    .message("No records found")
+                    .data(null)
+                    .build();
+
+            return ResponseEntity.badRequest().body(response);
         }
     }
 	

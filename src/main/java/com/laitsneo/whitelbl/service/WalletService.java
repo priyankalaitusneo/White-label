@@ -10,11 +10,13 @@ import java.util.List;
 public interface WalletService {
 
    
-    ResponseEntity<?> getAllMerchantsWalletSummary(String search);
 
     
     ResponseEntity<?> getAggregateWalletSummary();
 
   
     ResponseEntity<?> getMerchantWalletDetails(String merchantId);
+
+
+	ResponseEntity<?> getAllMerchantsWalletSummary(String search);
 }

@@ -40,108 +40,6 @@ public class WalletServiceImpl implements WalletService {
     private PayoutRepository payoutRepository;
 
     @Override
-    public ResponseEntity<?> getAllMerchantsWalletSummary(String search) {
-        logger.info("getAllMerchantsWalletSummary() → Request received with search: {}", search);
-
-        try {
-            // Fetch all clients or filtered by search
-            List<Client> clients;
-            
-            if (search != null && !search.trim().isEmpty()) {
-                String searchPattern = "%" + search.trim() + "%";
-                logger.info("getAllMerchantsWalletSummary() → Applying search filter: {}", searchPattern);
-                
-                clients = clientRepository.findAll().stream()
-                    .filter(c -> c.getUserId().toLowerCase().contains(search.toLowerCase()) ||
-                                c.getName().toLowerCase().contains(search.toLowerCase()))
-                    .collect(Collectors.toList());
-                
-                logger.info("getAllMerchantsWalletSummary() → Found {} merchants matching search", clients.size());
-            } else {
-                clients = clientRepository.findAll();
-                logger.info("getAllMerchantsWalletSummary() → Fetched all {} merchants", clients.size());
-            }
-
-            if (clients.isEmpty()) {
-                logger.warn("getAllMerchantsWalletSummary() → No merchants found");
-                ResponseDto response = ResponseDto.builder()
-                        .status("NO_CONTENT")
-                        .message("SUCCESS")
-                        .data("No merchants found")
-                        .build();
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
-            }
-
-            // Build merchant wallet summary list
-            List<MerchantWalletSummaryDto> summaryList = new ArrayList<>();
-
-            for (Client client : clients) {
-                try {
-                    String merchantId = client.getUserId();
-                    
-                    // Get total fund (account balance)
-                    BigDecimal totalFund = client.getAccountBal() != null ? 
-                        client.getAccountBal() : BigDecimal.ZERO;
-
-                    // Get locked amount for this merchant
-                    BigDecimal lockedAmount = lockedFundsRepository.getTotalLockedAmountByUserId(merchantId);
-                    if (lockedAmount == null) {
-                        lockedAmount = BigDecimal.ZERO;
-                    }
-
-                    // Calculate available balance
-                    BigDecimal available = totalFund.subtract(lockedAmount);
-
-                    // Get payin count
-                    Long payinCount = countPayinTransactions(merchantId);
-
-                    // Get payout count
-                    Long payoutCount = countPayoutTransactions(merchantId);
-
-                    MerchantWalletSummaryDto summary = MerchantWalletSummaryDto.builder()
-                            .merchantId(merchantId)
-                            .merchantName(client.getName())
-                            .totalFund(totalFund)
-                            .available(available)
-                            .locked(lockedAmount)
-                            .payinCount(payinCount)
-                            .payoutCount(payoutCount)
-                            .build();
-
-                    summaryList.add(summary);
-                    
-                    logger.debug("getAllMerchantsWalletSummary() → Processed merchant: {}, Total: {}, Locked: {}, Available: {}", 
-                        merchantId, totalFund, lockedAmount, available);
-                        
-                } catch (Exception e) {
-                    logger.error("getAllMerchantsWalletSummary() → Error processing merchant {}: {}", 
-                        client.getUserId(), e.getMessage());
-                    // Continue with next merchant
-                }
-            }
-
-            logger.info("getAllMerchantsWalletSummary() → Successfully processed {} merchants", summaryList.size());
-
-            ResponseDto response = ResponseDto.builder()
-                    .status("OK")
-                    .message("SUCCESS")
-                    .data(summaryList)
-                    .build();
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            logger.error("getAllMerchantsWalletSummary() → Exception occurred: {}", e.getMessage(), e);
-            ResponseDto response = ResponseDto.builder()
-                    .status("INTERNAL_SERVER_ERROR")
-                    .message("ERROR")
-                    .data("Failed to fetch merchant wallet summary: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-
-    @Override
     public ResponseEntity<?> getAggregateWalletSummary() {
         logger.info("getAggregateWalletSummary() → Request received");
 
@@ -222,6 +120,8 @@ public class WalletServiceImpl implements WalletService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+    
+    
 
     @Override
     public ResponseEntity<?> getMerchantWalletDetails(String merchantId) {
@@ -396,4 +296,111 @@ public class WalletServiceImpl implements WalletService {
 
         return combinedList;
     }
+
+
+
+    @Override
+    public ResponseEntity<?> getAllMerchantsWalletSummary(String search) {
+        logger.info("getAllMerchantsWalletSummary() → Request received with search: {}", search);
+
+        try {
+            // Fetch all clients or filtered by search
+            List<Client> clients;
+            
+            if (search != null && !search.trim().isEmpty()) {
+                String searchPattern = "%" + search.trim() + "%";
+                logger.info("getAllMerchantsWalletSummary() → Applying search filter: {}", searchPattern);
+                
+                clients = clientRepository.findAll().stream()
+                    .filter(c -> c.getUserId().toLowerCase().contains(search.toLowerCase()) ||
+                                c.getName().toLowerCase().contains(search.toLowerCase()))
+                    .collect(Collectors.toList());
+                
+                logger.info("getAllMerchantsWalletSummary() → Found {} merchants matching search", clients.size());
+            } else {
+                clients = clientRepository.findAll();
+                logger.info("getAllMerchantsWalletSummary() → Fetched all {} merchants", clients.size());
+            }
+
+            if (clients.isEmpty()) {
+                logger.warn("getAllMerchantsWalletSummary() → No merchants found");
+                ResponseDto response = ResponseDto.builder()
+                        .status("NO_CONTENT")
+                        .message("SUCCESS")
+                        .data("No merchants found")
+                        .build();
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+            }
+
+            // Build merchant wallet summary list
+            List<MerchantWalletSummaryDto> summaryList = new ArrayList<>();
+
+            for (Client client : clients) {
+                try {
+                    String merchantId = client.getUserId();
+                    
+                    // Get total fund (account balance)
+                    BigDecimal totalFund = client.getAccountBal() != null ? 
+                        client.getAccountBal() : BigDecimal.ZERO;
+
+                    // Get locked amount for this merchant
+                    BigDecimal lockedAmount = lockedFundsRepository.getTotalLockedAmountByUserId(merchantId);
+                    if (lockedAmount == null) {
+                        lockedAmount = BigDecimal.ZERO;
+                    }
+
+                    // Calculate available balance
+                    BigDecimal available = totalFund.subtract(lockedAmount);
+
+                    // Get payin count
+                    Long payinCount = countPayinTransactions(merchantId);
+
+                    // Get payout count
+                    Long payoutCount = countPayoutTransactions(merchantId);
+
+                    MerchantWalletSummaryDto summary = MerchantWalletSummaryDto.builder()
+                            .merchantId(merchantId)
+                            .merchantName(client.getName())
+                            .totalFund(totalFund)
+                            .available(available)
+                            .locked(lockedAmount)
+                            .payinCount(payinCount)
+                            .payoutCount(payoutCount)
+                            .build();
+
+                    summaryList.add(summary);
+                    
+                    logger.debug("getAllMerchantsWalletSummary() → Processed merchant: {}, Total: {}, Locked: {}, Available: {}", 
+                        merchantId, totalFund, lockedAmount, available);
+                        
+                } catch (Exception e) {
+                    logger.error("getAllMerchantsWalletSummary() → Error processing merchant {}: {}", 
+                        client.getUserId(), e.getMessage());
+                    // Continue with next merchant
+                }
+            }
+
+            logger.info("getAllMerchantsWalletSummary() → Successfully processed {} merchants", summaryList.size());
+
+            ResponseDto response = ResponseDto.builder()
+                    .status("OK")
+                    .message("SUCCESS")
+                    .data(summaryList)
+                    .build();
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("getAllMerchantsWalletSummary() → Exception occurred: {}", e.getMessage(), e);
+            ResponseDto response = ResponseDto.builder()
+                    .status("INTERNAL_SERVER_ERROR")
+                    .message("ERROR")
+                    .data("Failed to fetch merchant wallet summary: " + e.getMessage())
+                    .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+
+	
 }

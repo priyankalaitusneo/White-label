@@ -17,7 +17,18 @@ public class WalletController {
     @Autowired
     private WalletService walletService;
 
-   
+    @GetMapping("/summary")
+    public ResponseEntity<?> getAggregateWalletSummary() {
+        
+        logger.info("GET /wallet/summary → Request received");
+        
+        ResponseEntity<?> response = walletService.getAggregateWalletSummary();
+        
+        logger.info("GET /wallet/summary → Response status: {}", response.getStatusCode());
+        return response;
+    }
+ 
+
     @GetMapping("/merchants")
     public ResponseEntity<?> getAllMerchantsWalletSummary(
             @RequestParam(required = false) String search) {
@@ -27,18 +38,6 @@ public class WalletController {
         ResponseEntity<?> response = walletService.getAllMerchantsWalletSummary(search);
         
         logger.info("GET /wallet/merchants → Response status: {}", response.getStatusCode());
-        return response;
-    }
-
-   
-    @GetMapping("/summary")
-    public ResponseEntity<?> getAggregateWalletSummary() {
-        
-        logger.info("GET /wallet/summary → Request received");
-        
-        ResponseEntity<?> response = walletService.getAggregateWalletSummary();
-        
-        logger.info("GET /wallet/summary → Response status: {}", response.getStatusCode());
         return response;
     }
 

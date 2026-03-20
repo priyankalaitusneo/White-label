@@ -1223,12 +1223,17 @@ public class AdminController {
 
 			return ResponseEntity.ok("Settlement cron executed manually");
 		}
-
+		
 		@GetMapping("/settlementRecords")
-		public ResponseEntity<?> settlementRecords() {
-			logger.info("GET /settlement-records → Request");
-			ResponseEntity<?> response = adminService.settlementRecords();
-			logger.info("GET /settlement-records → Response Status: {}", response.getStatusCode());
-			return response;
+		public ResponseEntity<?> settlementRecords(
+		        @RequestParam(defaultValue = "0") int page,
+		        @RequestParam(defaultValue = "10") int size) {
+
+		    logger.info("GET /settlement-records → page: {}, size: {}", page, size);
+
+		    ResponseEntity<?> response = adminService.settlementRecords(page, size);
+
+		    logger.info("GET /settlement-records → Response Status: {}", response.getStatusCode());
+		    return response;
 		}
 }
